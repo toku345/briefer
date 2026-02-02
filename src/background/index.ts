@@ -16,11 +16,8 @@ chrome.action.onClicked.addListener(async (tab) => {
 
 // メッセージハンドラ
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('[Background] Received message:', message.type);
-
   // 送信元検証: 自拡張機能からのメッセージのみ受け付け
   if (!isValidSender(sender)) {
-    console.warn('[Background] Rejected message from unknown sender:', sender.id);
     return false;
   }
 
@@ -28,15 +25,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // tabId検証: sender.tab?.id を優先（Side Panelからは undefined）
     const tabId = sender.tab?.id ?? message.tabId;
     if (typeof tabId !== 'number' || tabId < 0) {
-      console.error('[Background] Invalid tabId:', tabId);
       sendResponse({ success: false, error: 'Invalid tabId' });
       return true;
     }
-    console.log('[Background] Starting chat with tabId:', tabId);
-    console.log('[Background] Payload:', message.payload);
-    handleChat(message.payload, tabId).catch((e) => {
-      console.error('[Background] Chat error:', e);
-    });
+    handleChat(message.payload, tabId).catch(() => {});
     sendResponse({ success: true });
     return true;
   }
@@ -55,9 +47,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleChat(request: SummarizeRequest, tabId: number | undefined): Promise<void> {
-  console.log('[Background] handleChat called with tabId:', tabId);
   if (!tabId) {
-    console.error('[Background] tabId is undefined, aborting');
     return;
   }
 
@@ -72,19 +62,14 @@ async function handleChat(request: SummarizeRequest, tabId: number | undefined):
   let fullResponse = '';
 
   try {
-    console.log('[Background] Starting stream chat...');
     for await (const chunk of streamChat(request.messages, request.pageContent)) {
-      console.log('[Background] Received chunk:', chunk);
-      // サイドパネルにチャンクを送信
       await sendToSidePanel(tabId, chunk);
 
       if (chunk.type === 'chunk' && chunk.content) {
         fullResponse += chunk.content;
       }
     }
-    console.log('[Background] Stream complete, fullResponse length:', fullResponse.length);
 
-    // アシスタントメッセージを保存
     if (fullResponse) {
       const assistantMessage: ChatMessage = {
         role: 'assistant',
@@ -93,7 +78,6 @@ async function handleChat(request: SummarizeRequest, tabId: number | undefined):
       await addMessage(tabId, assistantMessage);
     }
   } catch (error) {
-    console.error('[Background] Stream error:', error);
     const errorChunk: StreamChunk = {
       type: 'error',
       error: error instanceof Error ? error.message : 'Unknown error',
