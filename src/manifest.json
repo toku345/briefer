@@ -1,12 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "My Summaryzer",
+  "name": "Briefer",
   "version": "1.0.0",
-  "description": "ローカルvLLMを使用してページを要約・チャット",
+  "description": "ローカルLLMでページを素早く要約・チャット",
   "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
   "host_permissions": ["http://localhost:8000/*"],
   "action": {
-    "default_title": "Open Summaryzer",
+    "default_title": "Open Briefer",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
