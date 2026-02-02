@@ -11,7 +11,7 @@
 
 ## 必要環境
 
-- Node.js 18+
+- [Bun](https://bun.sh/)
 - Chrome 114+（Side Panel API対応）
 - vLLMサーバー（`http://localhost:8000`で起動）
 
@@ -20,13 +20,13 @@
 ### 1. 依存関係のインストール
 
 ```bash
-npm install
+bun install
 ```
 
 ### 2. ビルド
 
 ```bash
-npm run build
+bun run build
 ```
 
 ### 3. Chrome拡張機能の読み込み
@@ -54,13 +54,13 @@ vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct --port 8000
 
 ```bash
 # 開発モード（ファイル変更を監視）
-npm run dev
+bun run dev
 
 # テスト実行
-npm test
+bun test
 
 # 型チェック
-npm run typecheck
+bun run typecheck
 ```
 
 ## 設定変更
