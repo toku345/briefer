@@ -29,6 +29,10 @@ function sanitizeContent(content: string): string {
     .slice(0, 10000);
 }
 
+function sanitizeUrl(url: string): string {
+  return url.replace(/[\x00-\x1F\x7F]/g, '').slice(0, 2048);
+}
+
 interface ChatCompletionRequest {
   model: string;
   messages: Array<{
@@ -57,7 +61,7 @@ const SYSTEM_PROMPT = `あなたは優秀なアシスタントです。
 
 export function buildSystemMessage(pageContent: ExtractedContent): string {
   const safeTitle = escapeXml(sanitizeTitle(pageContent.title));
-  const safeUrl = escapeXml(pageContent.url);
+  const safeUrl = escapeXml(sanitizeUrl(pageContent.url));
   const safeContent = escapeXml(sanitizeContent(pageContent.content));
 
   return `${SYSTEM_PROMPT}
