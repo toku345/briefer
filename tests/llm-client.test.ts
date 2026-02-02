@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildSystemMessage, chat } from '../src/lib/llm-client';
-import type { ChatMessage, ExtractedContent } from '../src/lib/types';
+import { buildSystemMessage, chat, streamChat } from '../src/lib/llm-client';
+import type { ChatMessage, ExtractedContent, StreamChunk } from '../src/lib/types';
 
 describe('llm-client', () => {
   const mockPageContent: ExtractedContent = {
@@ -134,6 +134,144 @@ describe('llm-client', () => {
 
       expect(body.stream).toBe(true);
       expect(body.model).toBe('Qwen/Qwen3-Coder-30B-A3B-Instruct');
+    });
+  });
+
+  describe('streamChat edge cases', () => {
+    beforeEach(() => {
+      vi.resetAllMocks();
+    });
+
+    it('不正なJSONをスキップする', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: invalid json\n'));
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"OK"}}]}\n'),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toContainEqual({ type: 'chunk', content: 'OK' });
+      expect(chunks).toContainEqual({ type: 'done' });
+    });
+
+    it('レスポンスボディがない場合はエラーを返す', async () => {
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: null });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toContainEqual({ type: 'error', error: 'No response body' });
+    });
+
+    it('choices配列がない場合はスキップする', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: {"invalid": true}\n'));
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"valid"}}]}\n'),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent)) {
+        chunks.push(chunk);
+      }
+
+      const contentChunks = chunks.filter((c) => c.type === 'chunk');
+      expect(contentChunks).toHaveLength(1);
+      expect(contentChunks[0]).toEqual({ type: 'chunk', content: 'valid' });
+    });
+
+    it('ストリーム読み取り中のエラーを処理する', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.error(new Error('Network error'));
+        },
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toEqual({ type: 'error', error: 'Network error' });
+    });
+
+    it('空のcontentはスキップする', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":""}}]}\n'),
+          );
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"text"}}]}\n'),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent)) {
+        chunks.push(chunk);
+      }
+
+      const contentChunks = chunks.filter((c) => c.type === 'chunk');
+      expect(contentChunks).toHaveLength(1);
+      expect(contentChunks[0]).toEqual({ type: 'chunk', content: 'text' });
+    });
+
+    it('data: プレフィックスのない行はスキップする', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('comment line\n'));
+          controller.enqueue(new TextEncoder().encode(': SSE comment\n'));
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n'),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent)) {
+        chunks.push(chunk);
+      }
+
+      const contentChunks = chunks.filter((c) => c.type === 'chunk');
+      expect(contentChunks).toHaveLength(1);
     });
   });
 });
