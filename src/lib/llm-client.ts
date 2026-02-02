@@ -85,9 +85,6 @@ export async function* streamChat(
     stream: true,
   };
 
-  console.log('[LLM] Sending request to:', `${VLLM_BASE_URL}/chat/completions`);
-  console.log('[LLM] Request model:', DEFAULT_MODEL);
-
   const response = await fetch(`${VLLM_BASE_URL}/chat/completions`, {
     method: 'POST',
     headers: {
@@ -96,11 +93,7 @@ export async function* streamChat(
     body: JSON.stringify(request),
   });
 
-  console.log('[LLM] Response status:', response.status, response.statusText);
-
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    console.error('[LLM] Error response:', errorText);
     yield {
       type: 'error',
       error: `API error: ${response.status} ${response.statusText}`,
@@ -133,12 +126,16 @@ export async function* streamChat(
 
         try {
           const json = JSON.parse(trimmed.slice(6));
-          const content = json.choices?.[0]?.delta?.content;
-          if (content) {
+          // レスポンス形式の検証
+          if (!json || typeof json !== 'object' || !Array.isArray(json.choices)) {
+            continue;
+          }
+          const content = json.choices[0]?.delta?.content;
+          if (typeof content === 'string' && content) {
             yield { type: 'chunk', content };
           }
         } catch {
-          // JSON parse error - skip
+          // 不正なJSON形式はスキップ（SSEの仕様上、部分データが来る可能性があるため）
         }
       }
     }
