@@ -9,7 +9,7 @@ export function MessageList({ messages }: MessageListProps) {
   return (
     <>
       {messages.map((message, index) => (
-        <MessageBubble key={index} message={message} />
+        <MessageBubble key={`${message.role}-${index}`} message={message} />
       ))}
     </>
   );
