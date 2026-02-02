@@ -9,6 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { resolve } from 'node:path';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 function copyStaticAssets() {
@@ -93,7 +94,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [copyStaticAssets()],
+  plugins: [react(), copyStaticAssets()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),

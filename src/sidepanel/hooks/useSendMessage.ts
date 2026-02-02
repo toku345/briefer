@@ -1,0 +1,54 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ChatMessage, ChatState, ExtractedContent } from '@/lib/types';
+
+export function useSendMessage(
+  tabId: number | null,
+  pageContent: ExtractedContent | null,
+  setIsStreaming: (v: boolean) => void,
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userMessage: string) => {
+      if (!tabId || !pageContent) {
+        throw new Error('準備ができていません');
+      }
+
+      const currentState = queryClient.getQueryData<ChatState>(['chat', tabId]);
+      const messages: ChatMessage[] = [
+        ...(currentState?.messages ?? []),
+        { role: 'user', content: userMessage },
+      ];
+
+      await chrome.runtime.sendMessage({
+        type: 'CHAT',
+        tabId,
+        payload: {
+          messages: messages.filter((m) => m.role !== 'system'),
+          pageContent,
+        },
+      });
+
+      return userMessage;
+    },
+    onMutate: async (userMessage) => {
+      setIsStreaming(true);
+
+      await queryClient.cancelQueries({ queryKey: ['chat', tabId] });
+      const previousState = queryClient.getQueryData<ChatState>(['chat', tabId]);
+
+      queryClient.setQueryData<ChatState>(['chat', tabId], (old) => ({
+        messages: [...(old?.messages ?? []), { role: 'user', content: userMessage }],
+        pageContent: old?.pageContent ?? null,
+      }));
+
+      return { previousState };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousState) {
+        queryClient.setQueryData(['chat', tabId], context.previousState);
+      }
+      setIsStreaming(false);
+    },
+  });
+}

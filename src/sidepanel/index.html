@@ -7,28 +7,7 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="container">
-      <header class="header">
-        <h1>Briefer</h1>
-      </header>
-
-      <main class="chat-container" id="chat-container">
-        <div class="welcome-message">
-          <p>このページについて質問してください</p>
-          <p class="hint">例: 「このページを要約して」</p>
-        </div>
-      </main>
-
-      <footer class="input-container">
-        <textarea
-          id="message-input"
-          placeholder="メッセージを入力..."
-          rows="1"
-        ></textarea>
-        <button id="send-btn" type="button">送信</button>
-      </footer>
-    </div>
-
-    <script type="module" src="index.js"></script>
+    <div id="root"></div>
+    <script type="module" src="index.tsx"></script>
   </body>
 </html>
