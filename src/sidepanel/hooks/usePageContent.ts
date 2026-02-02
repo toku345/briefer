@@ -12,10 +12,10 @@ export function usePageContent(tabId: number | null) {
           type: 'GET_CONTENT',
         })) as ContentResponse;
 
-        if (response.success && response.data) {
+        if (response.success) {
           return response.data;
         }
-        throw new Error(response.error || 'コンテンツを取得できませんでした');
+        throw new Error(response.error);
       } catch {
         // Content Scriptが注入されていない場合、動的に注入
         await chrome.scripting.executeScript({
@@ -29,15 +29,14 @@ export function usePageContent(tabId: number | null) {
           type: 'GET_CONTENT',
         })) as ContentResponse;
 
-        if (response.success && response.data) {
+        if (response.success) {
           return response.data;
         }
 
-        const errorMsg = response.error || '';
-        if (errorMsg.includes('Cannot access') || errorMsg.includes('chrome://')) {
+        if (response.error.includes('Cannot access') || response.error.includes('chrome://')) {
           throw new Error('このページでは使用できません');
         }
-        throw new Error('コンテンツを取得できませんでした');
+        throw new Error(response.error);
       }
     },
     enabled: !!tabId,
