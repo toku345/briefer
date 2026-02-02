@@ -1,10 +1,6 @@
+import { addMessage, getChatState, setPageContent } from '../lib/chat-store';
 import { streamChat } from '../lib/llm-client';
-import {
-  getChatState,
-  addMessage,
-  setPageContent,
-} from '../lib/chat-store';
-import type { ChatMessage, SummarizeRequest, StreamChunk } from '../lib/types';
+import type { ChatMessage, StreamChunk, SummarizeRequest } from '../lib/types';
 
 // サイドパネルを開く
 chrome.action.onClicked.addListener(async (tab) => {
@@ -39,10 +35,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-async function handleChat(
-  request: SummarizeRequest,
-  tabId: number | undefined
-): Promise<void> {
+async function handleChat(request: SummarizeRequest, tabId: number | undefined): Promise<void> {
   console.log('[Background] handleChat called with tabId:', tabId);
   if (!tabId) {
     console.error('[Background] tabId is undefined, aborting');
@@ -61,10 +54,7 @@ async function handleChat(
 
   try {
     console.log('[Background] Starting stream chat...');
-    for await (const chunk of streamChat(
-      request.messages,
-      request.pageContent
-    )) {
+    for await (const chunk of streamChat(request.messages, request.pageContent)) {
       console.log('[Background] Received chunk:', chunk);
       // サイドパネルにチャンクを送信
       await sendToSidePanel(tabId, chunk);
@@ -93,10 +83,7 @@ async function handleChat(
   }
 }
 
-async function sendToSidePanel(
-  tabId: number,
-  chunk: StreamChunk
-): Promise<void> {
+async function sendToSidePanel(tabId: number, chunk: StreamChunk): Promise<void> {
   try {
     await chrome.runtime.sendMessage({
       type: 'STREAM_CHUNK',

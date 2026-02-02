@@ -42,7 +42,7 @@ ${pageContent.content}
 
 export async function* streamChat(
   messages: ChatMessage[],
-  pageContent: ExtractedContent
+  pageContent: ExtractedContent,
 ): AsyncGenerator<StreamChunk> {
   const systemMessage = buildSystemMessage(pageContent);
 
@@ -125,7 +125,7 @@ export async function* streamChat(
 
 export async function chat(
   messages: ChatMessage[],
-  pageContent: ExtractedContent
+  pageContent: ExtractedContent,
 ): Promise<string> {
   let result = '';
   for await (const chunk of streamChat(messages, pageContent)) {

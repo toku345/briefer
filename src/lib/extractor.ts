@@ -56,9 +56,11 @@ function extractBodyText(doc: Document): string {
     '[role="banner"]',
     '[role="contentinfo"]',
   ];
-  removeSelectors.forEach((sel) => {
-    clone.querySelectorAll(sel).forEach((el) => el.remove());
-  });
+  for (const sel of removeSelectors) {
+    for (const el of clone.querySelectorAll(sel)) {
+      el.remove();
+    }
+  }
 
   return cleanText(clone.textContent);
 }

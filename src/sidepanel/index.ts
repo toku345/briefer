@@ -6,12 +6,8 @@ import type {
   StreamChunk,
 } from '../lib/types';
 
-const chatContainer = document.getElementById(
-  'chat-container'
-) as HTMLDivElement;
-const messageInput = document.getElementById(
-  'message-input'
-) as HTMLTextAreaElement;
+const chatContainer = document.getElementById('chat-container') as HTMLDivElement;
+const messageInput = document.getElementById('message-input') as HTMLTextAreaElement;
 const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
 
 let currentTabId: number | null = null;
@@ -129,10 +125,7 @@ function setupEventListeners(): void {
 
   // ストリーミングチャンクを受信
   chrome.runtime.onMessage.addListener((message) => {
-    if (
-      message.type === 'STREAM_CHUNK' &&
-      message.tabId === currentTabId
-    ) {
+    if (message.type === 'STREAM_CHUNK' && message.tabId === currentTabId) {
       handleStreamChunk(message.payload as StreamChunk);
     }
   });
@@ -206,9 +199,9 @@ function renderMessages(): void {
   if (welcome) welcome.remove();
 
   // 既存のメッセージをクリア（ストリーミング中のものを除く）
-  chatContainer
-    .querySelectorAll('.message:not(.streaming)')
-    .forEach((el) => el.remove());
+  for (const el of chatContainer.querySelectorAll('.message:not(.streaming)')) {
+    el.remove();
+  }
 
   // メッセージを描画
   for (const msg of messages) {
@@ -225,7 +218,7 @@ function renderMessages(): void {
 
 function createMessageElement(
   role: 'user' | 'assistant' | 'system',
-  content: string
+  content: string,
 ): HTMLDivElement {
   const el = document.createElement('div');
   el.className = `message ${role}`;

@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSystemMessage, chat } from '../src/lib/llm-client';
-import type { ExtractedContent, ChatMessage } from '../src/lib/types';
+import type { ChatMessage, ExtractedContent } from '../src/lib/types';
 
 describe('llm-client', () => {
   const mockPageContent: ExtractedContent = {
@@ -29,14 +29,10 @@ describe('llm-client', () => {
       const mockStream = new ReadableStream({
         start(controller) {
           controller.enqueue(
-            new TextEncoder().encode(
-              'data: {"choices":[{"delta":{"content":"これは"}}]}\n'
-            )
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"これは"}}]}\n'),
           );
           controller.enqueue(
-            new TextEncoder().encode(
-              'data: {"choices":[{"delta":{"content":"要約です"}}]}\n'
-            )
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"要約です"}}]}\n'),
           );
           controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
           controller.close();
@@ -48,9 +44,7 @@ describe('llm-client', () => {
         body: mockStream,
       });
 
-      const messages: ChatMessage[] = [
-        { role: 'user', content: '要約して' },
-      ];
+      const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
 
       const result = await chat(messages, mockPageContent);
 
@@ -60,7 +54,7 @@ describe('llm-client', () => {
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-        })
+        }),
       );
     });
 
@@ -73,13 +67,9 @@ describe('llm-client', () => {
         body: null,
       });
 
-      const messages: ChatMessage[] = [
-        { role: 'user', content: '要約して' },
-      ];
+      const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
 
-      await expect(chat(messages, mockPageContent)).rejects.toThrow(
-        'API error: 500'
-      );
+      await expect(chat(messages, mockPageContent)).rejects.toThrow('API error: 500');
     });
 
     it('ストリーミングリクエストを送信する', async () => {
@@ -95,9 +85,7 @@ describe('llm-client', () => {
         body: mockStream,
       });
 
-      const messages: ChatMessage[] = [
-        { role: 'user', content: 'test' },
-      ];
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
 
       await chat(messages, mockPageContent);
 

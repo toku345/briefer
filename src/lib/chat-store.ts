@@ -17,10 +17,7 @@ export async function getChatState(tabId: number): Promise<ChatState> {
   );
 }
 
-export async function saveChatState(
-  tabId: number,
-  state: ChatState
-): Promise<void> {
+export async function saveChatState(tabId: number, state: ChatState): Promise<void> {
   const key = getStorageKey(tabId);
   // メッセージ数を制限
   const trimmedState: ChatState = {
@@ -30,20 +27,14 @@ export async function saveChatState(
   await chrome.storage.session.set({ [key]: trimmedState });
 }
 
-export async function addMessage(
-  tabId: number,
-  message: ChatMessage
-): Promise<ChatState> {
+export async function addMessage(tabId: number, message: ChatMessage): Promise<ChatState> {
   const state = await getChatState(tabId);
   state.messages.push(message);
   await saveChatState(tabId, state);
   return state;
 }
 
-export async function setPageContent(
-  tabId: number,
-  content: ExtractedContent
-): Promise<void> {
+export async function setPageContent(tabId: number, content: ExtractedContent): Promise<void> {
   const state = await getChatState(tabId);
   state.pageContent = content;
   await saveChatState(tabId, state);

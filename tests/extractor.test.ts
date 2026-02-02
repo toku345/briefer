@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
+import { describe, expect, it } from 'vitest';
 import { extractMainContent } from '../src/lib/extractor';
 
 describe('extractMainContent', () => {

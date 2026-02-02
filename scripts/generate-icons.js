@@ -1,7 +1,7 @@
-import { writeFileSync, mkdirSync } from 'fs';
-import { resolve, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { deflateSync } from 'zlib';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { deflateSync } from 'node:zlib';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const iconsDir = resolve(__dirname, '../src/icons');
@@ -30,7 +30,7 @@ function createIDAT(width, height) {
     for (let x = 0; x < width; x++) {
       const pixelStart = rowStart + 1 + x * 3;
       // 青色 (#0066CC)
-      raw[pixelStart] = 0x00;     // R
+      raw[pixelStart] = 0x00; // R
       raw[pixelStart + 1] = 0x66; // G
       raw[pixelStart + 2] = 0xcc; // B
     }
@@ -87,12 +87,7 @@ function createPng(size) {
   const idat = createIDAT(size, size);
   const iend = createIEND();
 
-  return Buffer.concat([
-    Buffer.from(signature),
-    ihdr,
-    idat,
-    iend,
-  ]);
+  return Buffer.concat([Buffer.from(signature), ihdr, idat, iend]);
 }
 
 mkdirSync(iconsDir, { recursive: true });
