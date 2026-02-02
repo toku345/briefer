@@ -19,8 +19,17 @@ export function useChatHistory(tabId: number | null) {
         })) as ChatState | null;
 
         return state ?? DEFAULT_STATE;
-      } catch {
-        return DEFAULT_STATE;
+      } catch (error) {
+        // Service Worker未起動の場合は空の状態を返す（初回アクセス時）
+        if (
+          error instanceof Error &&
+          (error.message.includes('Could not establish connection') ||
+            error.message.includes('Receiving end does not exist'))
+        ) {
+          return DEFAULT_STATE;
+        }
+        console.error('[Briefer] Failed to get chat state:', error);
+        throw new Error('会話履歴の読み込みに失敗しました');
       }
     },
     enabled: !!tabId,

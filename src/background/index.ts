@@ -28,7 +28,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ success: false, error: 'Invalid tabId' });
       return true;
     }
-    handleChat(message.payload, tabId).catch(() => {});
+    handleChat(message.payload, tabId).catch((error) => {
+      console.error('[Briefer] handleChat failed:', error);
+      sendToSidePanel(tabId, {
+        type: 'error',
+        error: error instanceof Error ? error.message : 'チャット処理に失敗しました',
+      });
+    });
     sendResponse({ success: true });
     return true;
   }
@@ -46,19 +52,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return false;
 });
 
-async function handleChat(request: SummarizeRequest, tabId: number | undefined): Promise<void> {
-  if (!tabId) {
-    return;
-  }
-
-  // ページコンテンツを保存
+async function handleChat(request: SummarizeRequest, tabId: number): Promise<void> {
   await setPageContent(tabId, request.pageContent);
 
-  // ユーザーメッセージを追加
-  const userMessage = request.messages[request.messages.length - 1];
-  await addMessage(tabId, userMessage);
-
-  // ストリーミングでチャット
   let fullResponse = '';
 
   try {
@@ -93,7 +89,15 @@ async function sendToSidePanel(tabId: number, chunk: StreamChunk): Promise<void>
       tabId,
       payload: chunk,
     });
-  } catch {
-    // サイドパネルが閉じている場合は無視
+  } catch (error) {
+    // サイドパネルが閉じている場合は期待される動作
+    if (
+      error instanceof Error &&
+      (error.message.includes('Could not establish connection') ||
+        error.message.includes('Receiving end does not exist'))
+    ) {
+      return;
+    }
+    console.error('[Briefer] Failed to send to side panel:', error);
   }
 }

@@ -8,23 +8,32 @@ function getStorageKey(tabId: number): string {
 
 export async function getChatState(tabId: number): Promise<ChatState> {
   const key = getStorageKey(tabId);
-  const result = await chrome.storage.session.get(key);
-  return (
-    result[key] || {
-      messages: [],
-      pageContent: null,
-    }
-  );
+  try {
+    const result = await chrome.storage.session.get(key);
+    return (
+      result[key] || {
+        messages: [],
+        pageContent: null,
+      }
+    );
+  } catch (error) {
+    console.error('[Briefer] Failed to get chat state:', error);
+    return { messages: [], pageContent: null };
+  }
 }
 
 export async function saveChatState(tabId: number, state: ChatState): Promise<void> {
   const key = getStorageKey(tabId);
-  // メッセージ数を制限
   const trimmedState: ChatState = {
     ...state,
     messages: state.messages.slice(-MAX_MESSAGES),
   };
-  await chrome.storage.session.set({ [key]: trimmedState });
+  try {
+    await chrome.storage.session.set({ [key]: trimmedState });
+  } catch (error) {
+    console.error('[Briefer] Failed to save chat state:', error);
+    throw new Error('会話履歴の保存に失敗しました');
+  }
 }
 
 export async function addMessage(tabId: number, message: ChatMessage): Promise<ChatState> {
@@ -42,5 +51,10 @@ export async function setPageContent(tabId: number, content: ExtractedContent): 
 
 export async function clearChat(tabId: number): Promise<void> {
   const key = getStorageKey(tabId);
-  await chrome.storage.session.remove(key);
+  try {
+    await chrome.storage.session.remove(key);
+  } catch (error) {
+    console.error('[Briefer] Failed to clear chat:', error);
+    throw new Error('会話履歴の削除に失敗しました');
+  }
 }
