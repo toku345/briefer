@@ -7,14 +7,12 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
   return sender.id === chrome.runtime.id;
 }
 
-// サイドパネルを開く
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab.id) {
     await chrome.sidePanel.open({ tabId: tab.id });
   }
 });
 
-// メッセージハンドラ
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // 送信元検証: 自拡張機能からのメッセージのみ受け付け
   if (!isValidSender(sender)) {

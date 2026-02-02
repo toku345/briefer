@@ -1,5 +1,6 @@
 import type { ChatMessage, ChatState, ExtractedContent } from './types';
 
+// chrome.storage.session のクォータ制限（1MB）を超えないよう、古いメッセージを削除
 const MAX_MESSAGES = 20;
 
 function getStorageKey(tabId: number): string {

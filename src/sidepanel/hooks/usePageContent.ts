@@ -23,6 +23,7 @@ export function usePageContent(tabId: number | null) {
           files: ['content/index.js'],
         });
 
+        // Content Scriptの初期化完了を待機（メッセージリスナー登録まで時間がかかる）
         await new Promise((resolve) => setTimeout(resolve, 100));
 
         const response = (await chrome.tabs.sendMessage(tabId, {

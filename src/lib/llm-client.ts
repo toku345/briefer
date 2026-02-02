@@ -1,5 +1,6 @@
 import type { ChatMessage, ExtractedContent, StreamChunk } from './types';
 
+// ローカル環境のvLLMサーバーを使用（本番環境では環境変数から取得する想定）
 const VLLM_BASE_URL = 'http://localhost:8000/v1';
 const DEFAULT_MODEL = 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
 

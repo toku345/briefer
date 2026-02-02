@@ -67,8 +67,5 @@ function extractBodyText(doc: Document): string {
 
 function cleanText(text: string | null): string {
   if (!text) return '';
-  return text
-    .replace(/\s+/g, ' ') // 連続空白を単一スペースに
-    .trim()
-    .slice(0, 10000); // トークン制限を考慮して最大10000文字
+  return text.replace(/\s+/g, ' ').trim().slice(0, 10000); // トークン制限を考慮して最大10000文字
 }
