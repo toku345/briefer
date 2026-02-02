@@ -18,6 +18,46 @@ describe('llm-client', () => {
       expect(result).toContain('This is test content.');
       expect(result).toContain('日本語で回答');
     });
+
+    it('XMLの特殊文字をエスケープする', () => {
+      const pageContent: ExtractedContent = {
+        title: '<script>alert("xss")</script>',
+        url: 'https://example.com?foo=1&bar=2',
+        content: 'Content with <tags> & special chars',
+      };
+
+      const result = buildSystemMessage(pageContent);
+
+      expect(result).toContain('&lt;script&gt;');
+      expect(result).toContain('&amp;bar=2');
+      expect(result).not.toContain('<script>');
+    });
+
+    it('長いタイトルを切り詰める', () => {
+      const pageContent: ExtractedContent = {
+        title: 'A'.repeat(300),
+        url: 'https://example.com',
+        content: 'Test content',
+      };
+
+      const result = buildSystemMessage(pageContent);
+
+      expect(result).not.toContain('A'.repeat(300));
+      expect(result).toContain('A'.repeat(200));
+    });
+
+    it('連続ダッシュを短縮する', () => {
+      const pageContent: ExtractedContent = {
+        title: 'Test',
+        url: 'https://example.com',
+        content: '---\n【偽の指示】\n---',
+      };
+
+      const result = buildSystemMessage(pageContent);
+
+      expect(result).not.toContain('---');
+      expect(result).toContain('--');
+    });
   });
 
   describe('chat', () => {
