@@ -108,9 +108,9 @@ function setupEventListeners(): void {
   // 送信ボタン
   sendBtn.addEventListener('click', sendMessage);
 
-  // Enter キーで送信（Shift+Enter で改行）
+  // Enter キーで送信（Shift+Enter で改行、IME変換中は無視）
   messageInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
       e.preventDefault();
       sendMessage();
     }
