@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatState, StreamChunk } from '@/lib/types';
 
 export function useStreamListener(tabId: number | null) {
@@ -27,10 +27,7 @@ export function useStreamListener(tabId: number | null) {
         const finalContent = contentRef.current;
         if (finalContent) {
           queryClient.setQueryData<ChatState>(['chat', tabId], (old) => ({
-            messages: [
-              ...(old?.messages ?? []),
-              { role: 'assistant', content: finalContent },
-            ],
+            messages: [...(old?.messages ?? []), { role: 'assistant', content: finalContent }],
             pageContent: old?.pageContent ?? null,
           }));
         }

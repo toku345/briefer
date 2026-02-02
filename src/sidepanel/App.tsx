@@ -1,11 +1,11 @@
 import { ChatContainer } from './components/ChatContainer';
 import { Header } from './components/Header';
 import { InputContainer } from './components/InputContainer';
+import { useChatHistory } from './hooks/useChatHistory';
 import { useCurrentTab } from './hooks/useCurrentTab';
 import { usePageContent } from './hooks/usePageContent';
-import { useChatHistory } from './hooks/useChatHistory';
-import { useStreamListener } from './hooks/useStreamListener';
 import { useSendMessage } from './hooks/useSendMessage';
+import { useStreamListener } from './hooks/useStreamListener';
 
 export function App() {
   const { tabId, error: tabError } = useCurrentTab();

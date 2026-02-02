@@ -19,6 +19,7 @@ export function ChatContainer({
 }: ChatContainerProps) {
   const containerRef = useRef<HTMLElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: messages/streamingContent変更時にスクロールする意図的な依存
   useEffect(() => {
     const container = containerRef.current;
     if (container) {

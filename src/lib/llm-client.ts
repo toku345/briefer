@@ -5,32 +5,40 @@ const DEFAULT_MODEL = 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
 
 // XMLの特殊文字をエスケープ
 function escapeXml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 // ページタイトルのサニタイズ（制御文字除去、改行除去、長さ制限）
 function sanitizeTitle(title: string): string {
-  return title
-    .replace(/[\x00-\x1F\x7F]/g, '')
-    .replace(/\n/g, ' ')
-    .trim()
-    .slice(0, 200);
+  return (
+    title
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: 制御文字の除去が目的
+      .replace(/[\x00-\x1F\x7F]/g, '')
+      .replace(/\n/g, ' ')
+      .trim()
+      .slice(0, 200)
+  );
 }
 
 // ページコンテンツのサニタイズ（制御文字除去、連続ダッシュ短縮、長さ制限）
 function sanitizeContent(content: string): string {
-  return content
-    .replace(/[\x00-\x1F\x7F]/g, ' ')
-    .replace(/-{3,}/g, '--')
-    .trim()
-    .slice(0, 10000);
+  return (
+    content
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: 制御文字の除去が目的
+      .replace(/[\x00-\x1F\x7F]/g, ' ')
+      .replace(/-{3,}/g, '--')
+      .trim()
+      .slice(0, 10000)
+  );
 }
 
 function sanitizeUrl(url: string): string {
-  return url.replace(/[\x00-\x1F\x7F]/g, '').slice(0, 2048);
+  return (
+    url
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: 制御文字の除去が目的
+      .replace(/[\x00-\x1F\x7F]/g, '')
+      .slice(0, 2048)
+  );
 }
 
 interface ChatCompletionRequest {
