@@ -38,6 +38,11 @@ async function init(): Promise<void> {
 
   // イベントリスナー設定
   setupEventListeners();
+
+  // 履歴がない場合はデフォルトテキストを設定
+  if (messages.length === 0) {
+    messageInput.value = 'このページを要約して';
+  }
 }
 
 async function fetchPageContent(): Promise<void> {
