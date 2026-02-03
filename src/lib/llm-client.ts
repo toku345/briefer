@@ -1,10 +1,4 @@
-import type {
-  ChatMessage,
-  ExtractedContent,
-  ModelInfo,
-  ModelsResponse,
-  StreamChunk,
-} from './types';
+import type { ChatMessage, ExtractedContent, ModelInfo, StreamChunk } from './types';
 
 // ローカル環境のvLLMサーバーを使用（本番環境では環境変数から取得する想定）
 const VLLM_BASE_URL = 'http://localhost:8000/v1';
