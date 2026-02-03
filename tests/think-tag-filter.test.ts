@@ -118,6 +118,38 @@ describe('ThinkTagFilter', () => {
       expect(filter.process('<think>考え<中>です</think>回答')).toBe('回答');
     });
 
+    it('タグ内で</で始まる別のタグが出現しても正しく処理する', () => {
+      const input = '<think>思考中</div>まだ思考</think>回答';
+      expect(filter.process(input)).toBe('回答');
+    });
+
+    it('終了タグが1文字ずつ到着しても正しく処理する', () => {
+      let result = '';
+      result += filter.process('<think>思考');
+      result += filter.process('<');
+      result += filter.process('/');
+      result += filter.process('t');
+      result += filter.process('h');
+      result += filter.process('i');
+      result += filter.process('n');
+      result += filter.process('k');
+      result += filter.process('>');
+      result += filter.process('回答');
+      expect(result).toBe('回答');
+    });
+
+    it('空チャンクが混在しても状態が維持される', () => {
+      let result = '';
+      result += filter.process('<thi');
+      result += filter.process('');
+      result += filter.process('nk>');
+      result += filter.process('');
+      result += filter.process('思考');
+      result += filter.process('</think>');
+      result += filter.process('回答');
+      expect(result).toBe('回答');
+    });
+
     it('reset()で状態が初期化される', () => {
       filter.process('<think>途中');
       filter.reset();
@@ -142,6 +174,32 @@ describe('ThinkTagFilter', () => {
       result += filter.process('<think>思考</thi');
       result += filter.flush();
       expect(result).toBe('');
+    });
+  });
+
+  describe('状態確認getter', () => {
+    it('初期状態はnormal', () => {
+      expect(filter.currentState).toBe('normal');
+      expect(filter.isInsideThinkTag).toBe(false);
+    });
+
+    it('<think>タグ内ではisInsideThinkTagがtrue', () => {
+      filter.process('<think>思考中');
+      expect(filter.currentState).toBe('inside-think');
+      expect(filter.isInsideThinkTag).toBe(true);
+    });
+
+    it('maybe-closing状態でもisInsideThinkTagがtrue', () => {
+      filter.process('<think>思考中</');
+      expect(filter.currentState).toBe('maybe-closing');
+      expect(filter.isInsideThinkTag).toBe(true);
+    });
+
+    it('reset()後は初期状態に戻る', () => {
+      filter.process('<think>思考中');
+      filter.reset();
+      expect(filter.currentState).toBe('normal');
+      expect(filter.isInsideThinkTag).toBe(false);
     });
   });
 

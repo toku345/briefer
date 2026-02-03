@@ -346,5 +346,36 @@ describe('background service worker', () => {
       expect(savedState.messages).toHaveLength(1);
       expect(savedState.messages[0].content).toBe('最終回答');
     });
+
+    it('ストリーム終了時にflush()で不完全なタグが出力される', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"テスト<thi"}}]}\n'),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({ ok: true, body: mockStream });
+
+      const sendResponse = vi.fn();
+      const request: SummarizeRequest = {
+        messages: [{ role: 'user', content: 'Hello' }],
+        pageContent: mockPageContent,
+      };
+
+      messageListener({ type: 'CHAT', tabId: 126, payload: request }, validSender, sendResponse);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const streamChunks = mockChrome.runtime.sendMessage.mock.calls
+        .filter((call) => call[0].type === 'STREAM_CHUNK' && call[0].payload.type === 'chunk')
+        .map((call) => call[0].payload.content);
+
+      // flush()により不完全なタグ "<thi" も出力される
+      expect(streamChunks.join('')).toBe('テスト<thi');
+    });
   });
 });
