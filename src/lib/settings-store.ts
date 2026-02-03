@@ -7,7 +7,7 @@ interface Settings {
 
 export async function getSettings(): Promise<Settings | null> {
   const result = await chrome.storage.local.get(SETTINGS_KEY);
-  return result[SETTINGS_KEY] ?? null;
+  return (result[SETTINGS_KEY] as Settings | undefined) ?? null;
 }
 
 export async function getSelectedModel(): Promise<string> {
