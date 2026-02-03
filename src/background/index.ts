@@ -1,6 +1,7 @@
 import { addMessage, getChatState, setPageContent } from '../lib/chat-store';
 import { fetchModels, streamChat } from '../lib/llm-client';
 import { getSelectedModel } from '../lib/settings-store';
+import { ThinkTagFilter } from '../lib/think-tag-filter';
 import type { ChatMessage, StreamChunk, SummarizeRequest } from '../lib/types';
 
 // 送信元が自拡張機能であることを検証（他の拡張機能からの不正なメッセージを拒否）
@@ -68,14 +69,25 @@ async function handleChat(request: SummarizeRequest, tabId: number): Promise<voi
   const model = await getSelectedModel();
 
   let fullResponse = '';
+  const filter = new ThinkTagFilter();
 
   try {
     for await (const chunk of streamChat(request.messages, request.pageContent, model)) {
-      await sendToSidePanel(tabId, chunk);
-
       if (chunk.type === 'chunk' && chunk.content) {
-        fullResponse += chunk.content;
+        const filtered = filter.process(chunk.content);
+        fullResponse += filtered;
+        if (filtered) {
+          await sendToSidePanel(tabId, { type: 'chunk', content: filtered });
+        }
+      } else {
+        await sendToSidePanel(tabId, chunk);
       }
+    }
+
+    const remaining = filter.flush();
+    if (remaining) {
+      fullResponse += remaining;
+      await sendToSidePanel(tabId, { type: 'chunk', content: remaining });
     }
 
     if (fullResponse) {

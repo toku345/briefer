@@ -12,6 +12,7 @@ let actionClickedListener: (tab: chrome.tabs.Tab) => void;
 
 // モックストレージ
 const mockStorage: Record<string, ChatState> = {};
+const mockLocalStorage: Record<string, unknown> = {};
 
 // Chrome API モック
 const mockChrome = {
@@ -43,6 +44,13 @@ const mockChrome = {
       }),
       remove: vi.fn((key: string) => {
         delete mockStorage[key];
+        return Promise.resolve();
+      }),
+    },
+    local: {
+      get: vi.fn((key: string) => Promise.resolve({ [key]: mockLocalStorage[key] })),
+      set: vi.fn((data: Record<string, unknown>) => {
+        Object.assign(mockLocalStorage, data);
         return Promise.resolve();
       }),
     },
@@ -78,6 +86,9 @@ describe('background service worker', () => {
     vi.clearAllMocks();
     for (const key of Object.keys(mockStorage)) {
       delete mockStorage[key];
+    }
+    for (const key of Object.keys(mockLocalStorage)) {
+      delete mockLocalStorage[key];
     }
   });
 
@@ -228,6 +239,112 @@ describe('background service worker', () => {
       const result = messageListener({ type: 'UNKNOWN' }, validSender, sendResponse);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('<think>タグフィルタリング', () => {
+    beforeEach(() => {
+      // getSelectedModelがfetchModelsを呼ばないよう、設定を事前にセット
+      mockLocalStorage.briefer_settings = { selectedModel: 'test-model' };
+    });
+
+    it('<think>タグを含むレスポンスがフィルタされる', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(
+              'data: {"choices":[{"delta":{"content":"<think>思考中</think>回答です"}}]}\n',
+            ),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({ ok: true, body: mockStream });
+
+      const sendResponse = vi.fn();
+      const request: SummarizeRequest = {
+        messages: [{ role: 'user', content: 'Hello' }],
+        pageContent: mockPageContent,
+      };
+
+      messageListener({ type: 'CHAT', tabId: 123, payload: request }, validSender, sendResponse);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const streamChunks = mockChrome.runtime.sendMessage.mock.calls
+        .filter((call) => call[0].type === 'STREAM_CHUNK' && call[0].payload.type === 'chunk')
+        .map((call) => call[0].payload.content);
+
+      expect(streamChunks.join('')).toBe('回答です');
+    });
+
+    it('分割されたタグもフィルタされる', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"<thi"}}]}\n'),
+          );
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"nk>思考"}}]}\n'),
+          );
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"</think>回答"}}]}\n'),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({ ok: true, body: mockStream });
+
+      const sendResponse = vi.fn();
+      const request: SummarizeRequest = {
+        messages: [{ role: 'user', content: 'Test' }],
+        pageContent: mockPageContent,
+      };
+
+      messageListener({ type: 'CHAT', tabId: 124, payload: request }, validSender, sendResponse);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const streamChunks = mockChrome.runtime.sendMessage.mock.calls
+        .filter((call) => call[0].type === 'STREAM_CHUNK' && call[0].payload.type === 'chunk')
+        .map((call) => call[0].payload.content);
+
+      expect(streamChunks.join('')).toBe('回答');
+    });
+
+    it('永続化されるメッセージからも<think>タグが除去される', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(
+              'data: {"choices":[{"delta":{"content":"<think>考え中</think>最終回答"}}]}\n',
+            ),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({ ok: true, body: mockStream });
+
+      const sendResponse = vi.fn();
+      const request: SummarizeRequest = {
+        messages: [{ role: 'user', content: 'Hello' }],
+        pageContent: mockPageContent,
+      };
+
+      messageListener({ type: 'CHAT', tabId: 125, payload: request }, validSender, sendResponse);
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      const savedState = mockStorage.chat_125;
+      expect(savedState).toBeDefined();
+      expect(savedState.messages).toHaveLength(1);
+      expect(savedState.messages[0].content).toBe('最終回答');
     });
   });
 });
