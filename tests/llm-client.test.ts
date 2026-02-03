@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildSystemMessage, chat, streamChat } from '../src/lib/llm-client';
 import type { ChatMessage, ExtractedContent, StreamChunk } from '../src/lib/types';
 
+const TEST_MODEL = 'test-model';
+
 describe('llm-client', () => {
   const mockPageContent: ExtractedContent = {
     title: 'Test Page',
@@ -86,7 +88,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
 
-      const result = await chat(messages, mockPageContent);
+      const result = await chat(messages, mockPageContent, TEST_MODEL);
 
       expect(result).toBe('これは要約です');
       expect(fetch).toHaveBeenCalledWith(
@@ -109,7 +111,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
 
-      await expect(chat(messages, mockPageContent)).rejects.toThrow('API error: 500');
+      await expect(chat(messages, mockPageContent, TEST_MODEL)).rejects.toThrow('API error: 500');
     });
 
     it('ストリーミングリクエストを送信する', async () => {
@@ -127,13 +129,13 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
 
-      await chat(messages, mockPageContent);
+      await chat(messages, mockPageContent, TEST_MODEL);
 
       const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
 
       expect(body.stream).toBe(true);
-      expect(body.model).toBe('Qwen/Qwen3-Coder-30B-A3B-Instruct');
+      expect(body.model).toBe(TEST_MODEL);
     });
   });
 
@@ -158,7 +160,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
         chunks.push(chunk);
       }
 
@@ -171,7 +173,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
         chunks.push(chunk);
       }
 
@@ -194,7 +196,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
         chunks.push(chunk);
       }
 
@@ -214,7 +216,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
         chunks.push(chunk);
       }
 
@@ -240,7 +242,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
         chunks.push(chunk);
       }
 
@@ -266,7 +268,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
         chunks.push(chunk);
       }
 

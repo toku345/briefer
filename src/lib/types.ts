@@ -4,6 +4,17 @@ export interface ExtractedContent {
   url: string;
 }
 
+export interface ModelInfo {
+  id: string;
+  object: 'model';
+  owned_by: string;
+}
+
+export interface ModelsResponse {
+  object: 'list';
+  data: ModelInfo[];
+}
+
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
@@ -32,4 +43,5 @@ export type MessageType =
   | { type: 'GET_CONTENT' }
   | { type: 'CHAT'; tabId: number; payload: SummarizeRequest }
   | { type: 'STREAM_CHUNK'; tabId: number; payload: StreamChunk }
-  | { type: 'GET_CHAT_STATE'; tabId: number };
+  | { type: 'GET_CHAT_STATE'; tabId: number }
+  | { type: 'GET_MODELS' };
