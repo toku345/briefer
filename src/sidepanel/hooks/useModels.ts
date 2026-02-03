@@ -1,11 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ModelInfo } from '@/lib/types';
-
-interface ModelsResponse {
-  success: boolean;
-  models?: ModelInfo[];
-  error?: string;
-}
+import type { GetModelsResponse, ModelInfo } from '@/lib/types';
 
 export function useModels() {
   return useQuery<ModelInfo[]>({
@@ -14,7 +8,7 @@ export function useModels() {
       try {
         const response = (await chrome.runtime.sendMessage({
           type: 'GET_MODELS',
-        })) as ModelsResponse;
+        })) as GetModelsResponse;
 
         if (!response.success) {
           throw new Error(response.error ?? 'Failed to fetch models');
@@ -22,13 +16,7 @@ export function useModels() {
 
         return response.models ?? [];
       } catch (error) {
-        if (
-          error instanceof Error &&
-          (error.message.includes('Could not establish connection') ||
-            error.message.includes('Receiving end does not exist'))
-        ) {
-          return [];
-        }
+        // Service Worker接続エラーも含め、全てのエラーをログ出力して再スロー
         console.error('[Briefer] Failed to fetch models:', error);
         throw error;
       }

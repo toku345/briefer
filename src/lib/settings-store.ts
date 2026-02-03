@@ -1,6 +1,5 @@
 import { fetchModels } from './llm-client';
-
-const SETTINGS_KEY = 'briefer_settings';
+import { SETTINGS_KEY } from './types';
 
 interface Settings {
   selectedModel: string;
@@ -17,12 +16,14 @@ export async function getSelectedModel(): Promise<string> {
     return settings.selectedModel;
   }
 
-  // 設定がない場合はAPIから利用可能なモデルを取得
+  // 設定がない場合はAPIから利用可能なモデルを取得し、永続化する
   const models = await fetchModels();
   if (models.length === 0) {
     throw new Error('No models available');
   }
-  return models[0].id;
+  const defaultModel = models[0].id;
+  await saveSelectedModel(defaultModel);
+  return defaultModel;
 }
 
 export async function saveSelectedModel(model: string): Promise<void> {

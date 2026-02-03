@@ -63,8 +63,14 @@ export async function fetchModels(): Promise<ModelInfo[]> {
   if (!response.ok) {
     throw new Error(`Failed to fetch models: ${response.status}`);
   }
-  const data: ModelsResponse = await response.json();
-  return data.data;
+  const data = await response.json();
+
+  // ランタイム検証: vLLM API応答形式を確認
+  if (data?.object !== 'list' || !Array.isArray(data?.data)) {
+    throw new Error('Invalid models response format');
+  }
+
+  return data.data as ModelInfo[];
 }
 
 const SYSTEM_PROMPT = `あなたは優秀なアシスタントです。

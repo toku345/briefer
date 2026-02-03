@@ -45,3 +45,13 @@ export type MessageType =
   | { type: 'STREAM_CHUNK'; tabId: number; payload: StreamChunk }
   | { type: 'GET_CHAT_STATE'; tabId: number }
   | { type: 'GET_MODELS' };
+
+// Chrome runtime message response types
+export interface GetModelsResponse {
+  success: boolean;
+  models?: ModelInfo[];
+  error?: string;
+}
+
+// Settings storage key (shared constant)
+export const SETTINGS_KEY = 'briefer_settings';
