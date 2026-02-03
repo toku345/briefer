@@ -15,6 +15,19 @@ bun run dev          # 開発モード（ファイル監視）
 bun test             # テスト実行
 bun test <file>      # 単一ファイルのテスト
 bun run typecheck    # 型チェックのみ
+bun run lint         # Lintチェック
+bun run check        # Lint + フォーマットチェック
+bun run check:fix    # Lint + フォーマット自動修正
+```
+
+## コミット前チェック
+
+コミット作成前に以下のコマンドが全てパスすることを確認する:
+
+```bash
+bun run typecheck    # 型チェック
+bun run check        # Lint + フォーマット
+bun test             # テスト
 ```
 
 ## 拡張機能の読み込み
@@ -68,5 +81,6 @@ bun run typecheck    # 型チェックのみ
 
 ```typescript
 const VLLM_BASE_URL = 'http://localhost:8000/v1';
-const DEFAULT_MODEL = 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
 ```
+
+モデルはvLLMサーバーから利用可能なモデルを動的に取得し、UIで選択可能。

@@ -1,5 +1,6 @@
 import { addMessage, getChatState, setPageContent } from '../lib/chat-store';
-import { streamChat } from '../lib/llm-client';
+import { fetchModels, streamChat } from '../lib/llm-client';
+import { getSelectedModel } from '../lib/settings-store';
 import type { ChatMessage, StreamChunk, SummarizeRequest } from '../lib/types';
 
 // 送信元が自拡張機能であることを検証（他の拡張機能からの不正なメッセージを拒否）
@@ -47,16 +48,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'GET_MODELS') {
+    fetchModels()
+      .then((models) => sendResponse({ success: true, models }))
+      .catch((error) =>
+        sendResponse({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to fetch models',
+        }),
+      );
+    return true;
+  }
+
   return false;
 });
 
 async function handleChat(request: SummarizeRequest, tabId: number): Promise<void> {
   await setPageContent(tabId, request.pageContent);
+  const model = await getSelectedModel();
 
   let fullResponse = '';
 
   try {
-    for await (const chunk of streamChat(request.messages, request.pageContent)) {
+    for await (const chunk of streamChat(request.messages, request.pageContent, model)) {
       await sendToSidePanel(tabId, chunk);
 
       if (chunk.type === 'chunk' && chunk.content) {

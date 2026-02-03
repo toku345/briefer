@@ -1,8 +1,7 @@
-import type { ChatMessage, ExtractedContent, StreamChunk } from './types';
+import type { ChatMessage, ExtractedContent, ModelInfo, StreamChunk } from './types';
 
 // ローカル環境のvLLMサーバーを使用（本番環境では環境変数から取得する想定）
 const VLLM_BASE_URL = 'http://localhost:8000/v1';
-const DEFAULT_MODEL = 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
 
 // XMLの特殊文字をエスケープ
 function escapeXml(text: string): string {
@@ -53,6 +52,21 @@ interface ChatCompletionRequest {
   stream?: boolean;
 }
 
+export async function fetchModels(): Promise<ModelInfo[]> {
+  const response = await fetch(`${VLLM_BASE_URL}/models`);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch models: ${response.status}`);
+  }
+  const data = await response.json();
+
+  // ランタイム検証: vLLM API応答形式を確認
+  if (data?.object !== 'list' || !Array.isArray(data?.data)) {
+    throw new Error('Invalid models response format');
+  }
+
+  return data.data as ModelInfo[];
+}
+
 const SYSTEM_PROMPT = `あなたは優秀なアシスタントです。
 ユーザーが閲覧しているWebページについて質問に答えてください。
 
@@ -87,11 +101,12 @@ ${safeContent}
 export async function* streamChat(
   messages: ChatMessage[],
   pageContent: ExtractedContent,
+  model: string,
 ): AsyncGenerator<StreamChunk> {
   const systemMessage = buildSystemMessage(pageContent);
 
   const request: ChatCompletionRequest = {
-    model: DEFAULT_MODEL,
+    model,
     messages: [{ role: 'system', content: systemMessage }, ...messages],
     max_tokens: 1024,
     temperature: 0.3,
@@ -167,9 +182,10 @@ export async function* streamChat(
 export async function chat(
   messages: ChatMessage[],
   pageContent: ExtractedContent,
+  model: string,
 ): Promise<string> {
   let result = '';
-  for await (const chunk of streamChat(messages, pageContent)) {
+  for await (const chunk of streamChat(messages, pageContent, model)) {
     if (chunk.type === 'chunk' && chunk.content) {
       result += chunk.content;
     } else if (chunk.type === 'error') {
