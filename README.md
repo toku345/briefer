@@ -39,9 +39,11 @@ bun run build
 ### 4. vLLMサーバーの起動
 
 ```bash
-# 例: Qwenモデルの場合
-vllm serve Qwen/Qwen3-Coder-30B-A3B-Instruct --port 8000
+# 使用するモデルを指定してvLLMサーバーを起動
+vllm serve <モデル名> --port 8000
 ```
+
+利用可能なモデルはUIのドロップダウンから選択可能。
 
 ## 使い方
 

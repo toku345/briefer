@@ -68,5 +68,6 @@ bun run typecheck    # 型チェックのみ
 
 ```typescript
 const VLLM_BASE_URL = 'http://localhost:8000/v1';
-const DEFAULT_MODEL = 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
 ```
+
+モデルはvLLMサーバーから利用可能なモデルを動的に取得し、UIで選択可能。
