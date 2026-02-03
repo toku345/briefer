@@ -7,16 +7,21 @@ function getStorageKey(tabId: number): string {
   return `chat_${tabId}`;
 }
 
+function isChatState(value: unknown): value is ChatState {
+  return (
+    typeof value === 'object' && value !== null && 'messages' in value && 'pageContent' in value
+  );
+}
+
 export async function getChatState(tabId: number): Promise<ChatState> {
   const key = getStorageKey(tabId);
   try {
     const result = await chrome.storage.session.get(key);
-    return (
-      result[key] || {
-        messages: [],
-        pageContent: null,
-      }
-    );
+    const stored = result[key];
+    if (isChatState(stored)) {
+      return stored;
+    }
+    return { messages: [], pageContent: null };
   } catch (error) {
     console.error('[Briefer] Failed to get chat state:', error);
     return { messages: [], pageContent: null };
