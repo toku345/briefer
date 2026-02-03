@@ -9,10 +9,7 @@ function getStorageKey(tabId: number): string {
 
 function isChatState(value: unknown): value is ChatState {
   return (
-    typeof value === 'object' &&
-    value !== null &&
-    'messages' in value &&
-    'pageContent' in value
+    typeof value === 'object' && value !== null && 'messages' in value && 'pageContent' in value
   );
 }
 
