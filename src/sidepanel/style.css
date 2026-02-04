@@ -80,7 +80,6 @@ body {
   padding: 10px 14px;
   border-radius: 12px;
   word-wrap: break-word;
-  white-space: pre-wrap;
 }
 
 .message.user {
@@ -88,6 +87,7 @@ body {
   background: #0066cc;
   color: #fff;
   border-bottom-right-radius: 4px;
+  white-space: pre-wrap;
 }
 
 .message.assistant {
@@ -169,4 +169,63 @@ body {
 #send-btn:disabled {
   background: #444;
   cursor: not-allowed;
+}
+
+/* Markdown styles for assistant messages */
+.message.assistant h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 12px 0 8px 0;
+  color: #fff;
+}
+
+.message.assistant h2:first-child {
+  margin-top: 0;
+}
+
+.message.assistant ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.message.assistant li {
+  margin: 8px 0;
+}
+
+.message.assistant li > p {
+  margin: 0;
+}
+
+.message.assistant strong {
+  color: #fff;
+}
+
+.message.assistant table {
+  border-collapse: collapse;
+  margin: 8px 0;
+  font-size: 13px;
+  width: 100%;
+}
+
+.message.assistant th,
+.message.assistant td {
+  border: 1px solid #555;
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.message.assistant th {
+  background: #444;
+}
+
+.message.assistant p {
+  margin: 8px 0;
+}
+
+.message.assistant p:first-child {
+  margin-top: 0;
+}
+
+.message.assistant p:last-child {
+  margin-bottom: 0;
 }
