@@ -95,6 +95,38 @@ body {
   background: #333;
   color: #e0e0e0;
   border-bottom-left-radius: 4px;
+  position: relative;
+}
+
+/* Copy button */
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  opacity: 0;
+  transition:
+    opacity 0.2s,
+    background 0.2s;
+}
+
+.message.assistant:hover .copy-button {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  background: #444;
+  color: #e0e0e0;
+}
+
+.copy-button.copied {
+  color: #4caf50;
+  opacity: 1;
 }
 
 .message.error {
