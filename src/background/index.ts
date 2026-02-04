@@ -10,17 +10,28 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
 }
 
 // デフォルトで Side Panel を無効化（明示的に開いたタブでのみ有効にする）
-chrome.sidePanel.setOptions({ enabled: false });
+chrome.sidePanel.setOptions({ enabled: false }).catch((err) => {
+  console.error('[Briefer] Failed to set default Side Panel options:', err);
+});
 
 chrome.action.onClicked.addListener((tab) => {
   if (tab.id) {
+    const tabId = tab.id;
+
     // setOptions と open を同期的に呼び出す（await するとユーザージェスチャーが失われる）
-    chrome.sidePanel.setOptions({
-      tabId: tab.id,
-      path: 'sidepanel/index.html',
-      enabled: true,
+    chrome.sidePanel
+      .setOptions({
+        tabId,
+        path: 'sidepanel/index.html',
+        enabled: true,
+      })
+      .catch((err) => {
+        console.error(`[Briefer] Failed to setOptions for tab ${tabId}:`, err);
+      });
+
+    chrome.sidePanel.open({ tabId }).catch((err) => {
+      console.error(`[Briefer] Failed to open Side Panel for tab ${tabId}:`, err);
     });
-    chrome.sidePanel.open({ tabId: tab.id });
   }
 });
 

@@ -33,8 +33,8 @@ const mockChrome = {
     },
   },
   sidePanel: {
-    setOptions: vi.fn(),
-    open: vi.fn(),
+    setOptions: vi.fn().mockResolvedValue(undefined),
+    open: vi.fn().mockResolvedValue(undefined),
   },
   storage: {
     session: {
@@ -68,6 +68,9 @@ global.fetch = mockFetch;
 // モジュールをインポート（モック設定後）
 await import('../src/background/index');
 
+// モジュール初期化時の setOptions 呼び出しを記録
+const initialSetOptionsCall = mockChrome.sidePanel.setOptions.mock.calls[0];
+
 describe('background service worker', () => {
   const mockPageContent: ExtractedContent = {
     title: 'Test Page',
@@ -91,6 +94,12 @@ describe('background service worker', () => {
     for (const key of Object.keys(mockLocalStorage)) {
       delete mockLocalStorage[key];
     }
+  });
+
+  describe('Side Panel 初期化', () => {
+    it('モジュール読み込み時にデフォルトで無効化する', () => {
+      expect(initialSetOptionsCall).toEqual([{ enabled: false }]);
+    });
   });
 
   describe('セキュリティ検証', () => {

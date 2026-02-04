@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockChromeTabs = {
   query: vi.fn(),
@@ -12,9 +12,14 @@ const mockChromeTabs = {
   tabs: mockChromeTabs,
 } as typeof chrome;
 
-const { useCurrentTab } = await import('../src/sidepanel/hooks/useCurrentTab');
+let useCurrentTab: typeof import('../src/sidepanel/hooks/useCurrentTab').useCurrentTab;
 
 describe('useCurrentTab', () => {
+  beforeAll(async () => {
+    const module = await import('../src/sidepanel/hooks/useCurrentTab');
+    useCurrentTab = module.useCurrentTab;
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

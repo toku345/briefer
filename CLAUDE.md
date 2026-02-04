@@ -9,15 +9,15 @@ BrieferはローカルLLM（vLLM）を使用してWebページを要約・チャ
 ## コマンド
 
 ```bash
-bun install          # 依存関係インストール
-bun run build        # ビルド（型チェック + Vite）
-bun run dev          # 開発モード（ファイル監視）
-bun test             # テスト実行
-bun test <file>      # 単一ファイルのテスト
-bun run typecheck    # 型チェックのみ
-bun run lint         # Lintチェック
-bun run check        # Lint + フォーマットチェック
-bun run check:fix    # Lint + フォーマット自動修正
+bun install              # 依存関係インストール
+bun run build            # ビルド（型チェック + Vite）
+bun run dev              # 開発モード（ファイル監視）
+bun run test             # テスト実行（vitestを使用）
+bun run test <file>      # 単一ファイルのテスト
+bun run typecheck        # 型チェックのみ
+bun run lint             # Lintチェック
+bun run check            # Lint + フォーマットチェック
+bun run check:fix        # Lint + フォーマット自動修正
 ```
 
 ## コミット前チェック
@@ -27,7 +27,7 @@ bun run check:fix    # Lint + フォーマット自動修正
 ```bash
 bun run typecheck    # 型チェック
 bun run check        # Lint + フォーマット
-bun test             # テスト
+bun run test         # テスト
 ```
 
 ## 拡張機能の読み込み
