@@ -217,13 +217,10 @@ describe('background service worker', () => {
   });
 
   describe('アクションボタン', () => {
-    it('クリック時にサイドパネルを開く', async () => {
+    it('クリック時にサイドパネルを開く', () => {
       const tab: chrome.tabs.Tab = { id: 456 } as chrome.tabs.Tab;
 
       actionClickedListener(tab);
-
-      // 非同期処理の完了を待つ
-      await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(mockChrome.sidePanel.setOptions).toHaveBeenCalledWith({
         tabId: 456,
@@ -233,7 +230,7 @@ describe('background service worker', () => {
       expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 456 });
     });
 
-    it('タブIDがない場合はサイドパネルを開かない', async () => {
+    it('タブIDがない場合はサイドパネルを開かない', () => {
       const tab: chrome.tabs.Tab = {} as chrome.tabs.Tab;
 
       actionClickedListener(tab);

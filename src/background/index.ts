@@ -12,14 +12,15 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
 // デフォルトで Side Panel を無効化（明示的に開いたタブでのみ有効にする）
 chrome.sidePanel.setOptions({ enabled: false });
 
-chrome.action.onClicked.addListener(async (tab) => {
+chrome.action.onClicked.addListener((tab) => {
   if (tab.id) {
-    await chrome.sidePanel.setOptions({
+    // setOptions と open を同期的に呼び出す（await するとユーザージェスチャーが失われる）
+    chrome.sidePanel.setOptions({
       tabId: tab.id,
       path: 'sidepanel/index.html',
       enabled: true,
     });
-    await chrome.sidePanel.open({ tabId: tab.id });
+    chrome.sidePanel.open({ tabId: tab.id });
   }
 });
 
