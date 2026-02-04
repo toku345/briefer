@@ -33,7 +33,8 @@ const mockChrome = {
     },
   },
   sidePanel: {
-    open: vi.fn(),
+    setOptions: vi.fn().mockResolvedValue(undefined),
+    open: vi.fn().mockResolvedValue(undefined),
   },
   storage: {
     session: {
@@ -67,6 +68,9 @@ global.fetch = mockFetch;
 // モジュールをインポート（モック設定後）
 await import('../src/background/index');
 
+// モジュール初期化時の setOptions 呼び出しを記録
+const initialSetOptionsCall = mockChrome.sidePanel.setOptions.mock.calls[0];
+
 describe('background service worker', () => {
   const mockPageContent: ExtractedContent = {
     title: 'Test Page',
@@ -90,6 +94,12 @@ describe('background service worker', () => {
     for (const key of Object.keys(mockLocalStorage)) {
       delete mockLocalStorage[key];
     }
+  });
+
+  describe('Side Panel 初期化', () => {
+    it('モジュール読み込み時にデフォルトで無効化する', () => {
+      expect(initialSetOptionsCall).toEqual([{ enabled: false }]);
+    });
   });
 
   describe('セキュリティ検証', () => {
@@ -216,19 +226,25 @@ describe('background service worker', () => {
   });
 
   describe('アクションボタン', () => {
-    it('クリック時にサイドパネルを開く', async () => {
+    it('クリック時にサイドパネルを開く', () => {
       const tab: chrome.tabs.Tab = { id: 456 } as chrome.tabs.Tab;
 
       actionClickedListener(tab);
 
+      expect(mockChrome.sidePanel.setOptions).toHaveBeenCalledWith({
+        tabId: 456,
+        path: 'sidepanel/index.html',
+        enabled: true,
+      });
       expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 456 });
     });
 
-    it('タブIDがない場合はサイドパネルを開かない', async () => {
+    it('タブIDがない場合はサイドパネルを開かない', () => {
       const tab: chrome.tabs.Tab = {} as chrome.tabs.Tab;
 
       actionClickedListener(tab);
 
+      expect(mockChrome.sidePanel.setOptions).not.toHaveBeenCalled();
       expect(mockChrome.sidePanel.open).not.toHaveBeenCalled();
     });
   });
