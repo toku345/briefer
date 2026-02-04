@@ -33,6 +33,7 @@ const mockChrome = {
     },
   },
   sidePanel: {
+    setOptions: vi.fn(),
     open: vi.fn(),
   },
   storage: {
@@ -221,6 +222,14 @@ describe('background service worker', () => {
 
       actionClickedListener(tab);
 
+      // 非同期処理の完了を待つ
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(mockChrome.sidePanel.setOptions).toHaveBeenCalledWith({
+        tabId: 456,
+        path: 'sidepanel/index.html',
+        enabled: true,
+      });
       expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 456 });
     });
 
@@ -229,6 +238,7 @@ describe('background service worker', () => {
 
       actionClickedListener(tab);
 
+      expect(mockChrome.sidePanel.setOptions).not.toHaveBeenCalled();
       expect(mockChrome.sidePanel.open).not.toHaveBeenCalled();
     });
   });

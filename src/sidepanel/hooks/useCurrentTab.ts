@@ -18,17 +18,6 @@ export function useCurrentTab() {
         console.error('[Briefer] Failed to query tabs:', err);
         setError('タブ情報の取得に失敗しました');
       });
-
-    const handleActivated = (activeInfo: chrome.tabs.OnActivatedInfo) => {
-      setTabId(activeInfo.tabId);
-      setError(null);
-    };
-
-    chrome.tabs.onActivated.addListener(handleActivated);
-
-    return () => {
-      chrome.tabs.onActivated.removeListener(handleActivated);
-    };
   }, []);
 
   return { tabId, error };

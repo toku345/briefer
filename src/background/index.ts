@@ -11,6 +11,11 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
 
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab.id) {
+    await chrome.sidePanel.setOptions({
+      tabId: tab.id,
+      path: 'sidepanel/index.html',
+      enabled: true,
+    });
     await chrome.sidePanel.open({ tabId: tab.id });
   }
 });
