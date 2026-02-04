@@ -9,6 +9,9 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
   return sender.id === chrome.runtime.id;
 }
 
+// デフォルトで Side Panel を無効化（明示的に開いたタブでのみ有効にする）
+chrome.sidePanel.setOptions({ enabled: false });
+
 chrome.action.onClicked.addListener(async (tab) => {
   if (tab.id) {
     await chrome.sidePanel.setOptions({
