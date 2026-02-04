@@ -1,5 +1,6 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ErrorBoundary } from './ErrorBoundary';
 
 interface StreamingMessageProps {
   content: string;
@@ -8,7 +9,9 @@ interface StreamingMessageProps {
 export function StreamingMessage({ content }: StreamingMessageProps) {
   return (
     <div className="message assistant streaming">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ErrorBoundary fallback={<span>{content}</span>}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      </ErrorBoundary>
     </div>
   );
 }

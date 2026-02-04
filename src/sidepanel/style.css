@@ -229,3 +229,10 @@ body {
 .message.assistant p:last-child {
   margin-bottom: 0;
 }
+
+.error-fallback {
+  padding: 20px;
+  text-align: center;
+  color: #ffaaaa;
+  background: #661111;
+}
