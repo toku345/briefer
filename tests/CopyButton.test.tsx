@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CopyButton } from '../src/sidepanel/components/CopyButton';
 
 describe('CopyButton', () => {
@@ -15,6 +15,10 @@ describe('CopyButton', () => {
         writeText: mockWriteText,
       },
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('コピーボタンが表示される', () => {
@@ -79,5 +83,65 @@ describe('CopyButton', () => {
     });
 
     consoleError.mockRestore();
+  });
+
+  it('copied状態が2秒後にリセットされる', async () => {
+    vi.useFakeTimers();
+    mockWriteText.mockResolvedValueOnce(undefined);
+
+    render(<CopyButton content="テスト" modelId="test-model" />);
+    const button = screen.getByRole('button', { name: 'Markdownをコピー' });
+
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    expect(button.className).toContain('copied');
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000);
+    });
+
+    expect(button.className).not.toContain('copied');
+  });
+
+  it('コピーエラー時にerrorクラスが追加される', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockWriteText.mockRejectedValueOnce(new Error('Copy failed'));
+
+    render(<CopyButton content="テスト" modelId="test-model" />);
+    const button = screen.getByRole('button', { name: 'Markdownをコピー' });
+
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(button.className).toContain('error');
+      expect(button.className).not.toContain('copied');
+    });
+  });
+
+  it('エラー状態が3秒後にリセットされる', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockWriteText.mockRejectedValueOnce(new Error('Copy failed'));
+
+    render(<CopyButton content="テスト" modelId="test-model" />);
+    const button = screen.getByRole('button', { name: 'Markdownをコピー' });
+
+    fireEvent.click(button);
+
+    // Promiseが解決するのを待つ
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(button.className).toContain('error');
+
+    // 3秒進める
+    await act(async () => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(button.className).not.toContain('error');
   });
 });

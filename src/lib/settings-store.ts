@@ -11,16 +11,20 @@ export async function getSettings(): Promise<Settings | null> {
 }
 
 export async function getSelectedModel(): Promise<string> {
-  const settings = await getSettings();
-  if (settings?.selectedModel) {
-    return settings.selectedModel;
-  }
-
-  // 設定がない場合はAPIから利用可能なモデルを取得し、永続化する
   const models = await fetchModels();
   if (models.length === 0) {
     throw new Error('No models available');
   }
+
+  const settings = await getSettings();
+  const savedModel = settings?.selectedModel;
+
+  // 保存されたモデルが利用可能なモデル一覧に含まれているか検証
+  if (savedModel && models.some((m) => m.id === savedModel)) {
+    return savedModel;
+  }
+
+  // 保存されたモデルが無効な場合は最初の利用可能なモデルにリセット
   const defaultModel = models[0].id;
   await saveSelectedModel(defaultModel);
   return defaultModel;

@@ -27,7 +27,10 @@ export function useStreamListener(tabId: number | null) {
         const finalContent = contentRef.current;
         if (finalContent) {
           queryClient.setQueryData<ChatState>(['chat', tabId], (old) => ({
-            messages: [...(old?.messages ?? []), { role: 'assistant', content: finalContent }],
+            messages: [
+              ...(old?.messages ?? []),
+              { role: 'assistant', content: finalContent, modelId: chunk.modelId },
+            ],
             pageContent: old?.pageContent ?? null,
           }));
         }

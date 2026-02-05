@@ -169,7 +169,7 @@ describe('llm-client', () => {
       }
 
       expect(chunks).toContainEqual({ type: 'chunk', content: 'OK' });
-      expect(chunks).toContainEqual({ type: 'done' });
+      expect(chunks).toContainEqual({ type: 'done', modelId: TEST_MODEL });
     });
 
     it('レスポンスボディがない場合はエラーを返す', async () => {
