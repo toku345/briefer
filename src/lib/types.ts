@@ -18,6 +18,8 @@ export interface ModelsResponse {
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
+  /** アシスタントメッセージ生成時に使用されたモデルID */
+  modelId?: string;
 }
 
 export interface ChatState {
@@ -36,7 +38,7 @@ export interface SummarizeRequest {
 
 export type StreamChunk =
   | { type: 'chunk'; content: string }
-  | { type: 'done' }
+  | { type: 'done'; modelId: string }
   | { type: 'error'; error: string };
 
 export type MessageType =

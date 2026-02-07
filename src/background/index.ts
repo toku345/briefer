@@ -114,6 +114,7 @@ async function handleChat(request: SummarizeRequest, tabId: number): Promise<voi
       const assistantMessage: ChatMessage = {
         role: 'assistant',
         content: fullResponse,
+        modelId: model,
       };
       await addMessage(tabId, assistantMessage);
     }

@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ChatMessage, ChatState, ExtractedContent } from '@/lib/types';
+import type { ChatState, ExtractedContent } from '@/lib/types';
 
 export function useSendMessage(
   tabId: number | null,
@@ -14,11 +14,9 @@ export function useSendMessage(
         throw new Error('準備ができていません');
       }
 
+      // onMutateで既にユーザーメッセージが追加されているため、currentStateをそのまま使用
       const currentState = queryClient.getQueryData<ChatState>(['chat', tabId]);
-      const messages: ChatMessage[] = [
-        ...(currentState?.messages ?? []),
-        { role: 'user', content: userMessage },
-      ];
+      const messages = currentState?.messages ?? [];
 
       await chrome.runtime.sendMessage({
         type: 'CHAT',

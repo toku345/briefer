@@ -117,9 +117,12 @@ export async function* streamChat(
 ): AsyncGenerator<StreamChunk> {
   const systemMessage = buildSystemMessage(pageContent);
 
+  // APIリクエスト用にmodelIdを除外（vLLM APIは追加フィールドを受け付けない）
+  const apiMessages = messages.map(({ role, content }) => ({ role, content }));
+
   const request: ChatCompletionRequest = {
     model,
-    messages: [{ role: 'system', content: systemMessage }, ...messages],
+    messages: [{ role: 'system', content: systemMessage }, ...apiMessages],
     max_tokens: 2048,
     temperature: 0.3,
     stream: true,
@@ -180,7 +183,7 @@ export async function* streamChat(
       }
     }
 
-    yield { type: 'done' };
+    yield { type: 'done', modelId: model };
   } catch (error) {
     yield {
       type: 'error',

@@ -260,8 +260,13 @@ describe('background service worker', () => {
 
   describe('<think>タグフィルタリング', () => {
     beforeEach(() => {
-      // getSelectedModelがfetchModelsを呼ばないよう、設定を事前にセット
+      // getSelectedModelが使用するモデル一覧と設定をセット
       mockLocalStorage.briefer_settings = { selectedModel: 'test-model' };
+      // fetchModelsのレスポンスをモック（保存されたモデルが利用可能か検証するため）
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ object: 'list', data: [{ id: 'test-model' }] }),
+      });
     });
 
     it('<think>タグを含むレスポンスがフィルタされる', async () => {
