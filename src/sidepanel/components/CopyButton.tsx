@@ -9,7 +9,6 @@ export function CopyButton({ content, modelId }: CopyButtonProps) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState(false);
 
-  // アンマウント時のメモリリーク防止
   useEffect(() => {
     if (copied) {
       const timeoutId = setTimeout(() => setCopied(false), 2000);
@@ -26,7 +25,7 @@ export function CopyButton({ content, modelId }: CopyButtonProps) {
 
   const handleCopy = useCallback(async () => {
     const modelName = modelId ? modelId.split('/').pop() : 'Unknown';
-    // trim() + LLMが出力する不可視Unicode文字(zero-width space等)を除去
+    // LLMが出力する不可視Unicode文字(zero-width space等)と前後の空白を除去
     const cleaned = content.replace(
       /^[\s\u200B-\u200D\u2060\uFEFF]+|[\s\u200B-\u200D\u2060\uFEFF]+$/g,
       '',

@@ -11,23 +11,35 @@ export async function getSettings(): Promise<Settings | null> {
 }
 
 export async function getSelectedModel(): Promise<string> {
-  const models = await fetchModels();
-  if (models.length === 0) {
-    throw new Error('No models available');
-  }
-
   const settings = await getSettings();
   const savedModel = settings?.selectedModel;
 
-  // 保存されたモデルが利用可能なモデル一覧に含まれているか検証
-  if (savedModel && models.some((m) => m.id === savedModel)) {
-    return savedModel;
-  }
+  try {
+    const models = await fetchModels();
+    if (models.length === 0) {
+      throw new Error('No models available');
+    }
 
-  // 保存されたモデルが無効な場合は最初の利用可能なモデルにリセット
-  const defaultModel = models[0].id;
-  await saveSelectedModel(defaultModel);
-  return defaultModel;
+    if (savedModel && models.some((m) => m.id === savedModel)) {
+      return savedModel;
+    }
+
+    if (savedModel) {
+      console.warn(
+        `[Briefer] Saved model "${savedModel}" not found. Falling back to "${models[0].id}".`,
+      );
+    }
+    const defaultModel = models[0].id;
+    await saveSelectedModel(defaultModel);
+    return defaultModel;
+  } catch (err) {
+    // fetchModels() 失敗時、保存済みモデルがあればフォールバックとして使用
+    if (savedModel) {
+      console.warn('[Briefer] Failed to validate model, using saved:', savedModel);
+      return savedModel;
+    }
+    throw err;
+  }
 }
 
 export async function saveSelectedModel(model: string): Promise<void> {
