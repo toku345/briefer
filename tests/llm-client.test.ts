@@ -60,7 +60,7 @@ describe('llm-client', () => {
       // ページコンテンツ部分を抽出して検証（プロンプト内のテーブル区切り線は除外）
       const pageContentMatch = result.match(/<page-content>([\s\S]*?)<\/page-content>/);
       expect(pageContentMatch).not.toBeNull();
-      const extractedContent = pageContentMatch![1];
+      const extractedContent = pageContentMatch?.[1];
       expect(extractedContent).not.toContain('---');
       expect(extractedContent).toContain('--');
     });
