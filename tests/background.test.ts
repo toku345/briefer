@@ -129,6 +129,12 @@ describe('background service worker', () => {
 
   describe('CHAT メッセージ', () => {
     it('有効なtabIdでCHATメッセージを処理する', async () => {
+      mockLocalStorage.briefer_settings = { selectedModel: 'test-model' };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ object: 'list', data: [{ id: 'test-model' }] }),
+      });
+
       const mockStream = new ReadableStream({
         start(controller) {
           controller.enqueue(
@@ -260,7 +266,6 @@ describe('background service worker', () => {
 
   describe('<think>タグフィルタリング', () => {
     beforeEach(() => {
-      // getSelectedModelが使用するモデル一覧と設定をセット
       mockLocalStorage.briefer_settings = { selectedModel: 'test-model' };
       // fetchModelsのレスポンスをモック（保存されたモデルが利用可能か検証するため）
       mockFetch.mockResolvedValueOnce({

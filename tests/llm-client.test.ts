@@ -118,6 +118,35 @@ describe('llm-client', () => {
       await expect(chat(messages, mockPageContent, TEST_MODEL)).rejects.toThrow('API error: 500');
     });
 
+    it('modelIdを含むメッセージからAPIリクエスト時にmodelIdを除外する', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        body: mockStream,
+      });
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: '要約して' },
+        { role: 'assistant', content: '要約です', modelId: 'org/some-model' },
+        { role: 'user', content: '続けて' },
+      ];
+
+      await chat(messages, mockPageContent, TEST_MODEL);
+
+      const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      for (const msg of body.messages) {
+        expect(msg).not.toHaveProperty('modelId');
+      }
+    });
+
     it('ストリーミングリクエストを送信する', async () => {
       const mockStream = new ReadableStream({
         start(controller) {
