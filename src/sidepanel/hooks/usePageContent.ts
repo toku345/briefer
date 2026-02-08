@@ -1,13 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ContentResponse, ExtractedContent } from '@/lib/types';
 
-// Content Scriptの初期化完了を待機する時間（メッセージリスナー登録に必要）
+// executeScript完了後、リスナー登録には非同期の遅延があり即sendMessageすると接続エラーになる
 const CONTENT_SCRIPT_INIT_MS = 100;
 
 async function requestContent(tabId: number): Promise<ExtractedContent> {
   const response = (await chrome.tabs.sendMessage(tabId, {
     type: 'GET_CONTENT',
-  })) as ContentResponse;
+  })) as ContentResponse | undefined;
+
+  if (!response) {
+    throw new Error('ページからの応答がありませんでした');
+  }
 
   if (response.success) {
     return response.data;
@@ -28,7 +32,11 @@ async function injectContentScript(tabId: number): Promise<void> {
 }
 
 function isContentScriptMissing(error: unknown): boolean {
-  return error instanceof Error && error.message.includes('Could not establish connection');
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes('Could not establish connection') ||
+    error.message.includes('message port closed')
+  );
 }
 
 export function usePageContent(tabId: number | null) {
