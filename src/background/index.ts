@@ -21,7 +21,11 @@ chrome.runtime.onConnect.addListener((port) => {
 
   port.onMessage.addListener((msg: PortMessage) => {
     if (msg.type === 'KEEPALIVE_PING') {
-      port.postMessage({ type: 'KEEPALIVE_PONG' } satisfies PortMessage);
+      try {
+        port.postMessage({ type: 'KEEPALIVE_PONG' } satisfies PortMessage);
+      } catch {
+        // ポートが既に切断されている場合は無視
+      }
     }
   });
 });

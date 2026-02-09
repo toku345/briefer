@@ -43,7 +43,7 @@ export function useKeepalive() {
         stopKeepalive();
       });
     } catch {
-      portRef.current = null;
+      stopKeepalive();
     }
   }, [stopKeepalive]);
 

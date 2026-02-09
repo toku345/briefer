@@ -6,6 +6,7 @@ export function useSendMessage(
   pageContent: ExtractedContent | null,
   setIsStreaming: (v: boolean) => void,
   startKeepalive: () => void,
+  stopKeepalive: () => void,
 ) {
   const queryClient = useQueryClient();
 
@@ -50,6 +51,7 @@ export function useSendMessage(
         queryClient.setQueryData(['chat', tabId], context.previousState);
       }
       setIsStreaming(false);
+      stopKeepalive();
     },
   });
 }

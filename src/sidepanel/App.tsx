@@ -25,6 +25,7 @@ export function App() {
     pageContent ?? null,
     setIsStreaming,
     startKeepalive,
+    stopKeepalive,
   );
 
   const messages = chatState?.messages ?? [];
