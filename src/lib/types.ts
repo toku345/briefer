@@ -57,3 +57,8 @@ export interface GetModelsResponse {
 
 // Settings storage key (shared constant)
 export const SETTINGS_KEY = 'briefer_settings';
+
+// Port-based keepalive (MV3 Service Worker のアイドルタイムアウト対策)
+export type PortMessage = { type: 'KEEPALIVE_PING' } | { type: 'KEEPALIVE_PONG' };
+
+export const KEEPALIVE_PORT_NAME = 'briefer-keepalive';

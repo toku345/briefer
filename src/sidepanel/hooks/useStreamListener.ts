@@ -2,12 +2,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ChatState, StreamChunk } from '@/lib/types';
 
-export function useStreamListener(tabId: number | null) {
+export function useStreamListener(tabId: number | null, onStreamEnd?: () => void) {
   const [streamingContent, setStreamingContent] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const contentRef = useRef('');
+  const onStreamEndRef = useRef(onStreamEnd);
+
+  useEffect(() => {
+    onStreamEndRef.current = onStreamEnd;
+  }, [onStreamEnd]);
 
   useEffect(() => {
     contentRef.current = streamingContent;
@@ -36,10 +41,12 @@ export function useStreamListener(tabId: number | null) {
         }
         setStreamingContent('');
         setIsStreaming(false);
+        onStreamEndRef.current?.();
       } else if (chunk.type === 'error') {
         setError(chunk.error || 'エラーが発生しました');
         setStreamingContent('');
         setIsStreaming(false);
+        onStreamEndRef.current?.();
       }
     };
 

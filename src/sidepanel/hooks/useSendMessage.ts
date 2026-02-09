@@ -5,6 +5,8 @@ export function useSendMessage(
   tabId: number | null,
   pageContent: ExtractedContent | null,
   setIsStreaming: (v: boolean) => void,
+  startKeepalive: () => void,
+  stopKeepalive: () => void,
 ) {
   const queryClient = useQueryClient();
 
@@ -17,6 +19,8 @@ export function useSendMessage(
       // onMutateで既にユーザーメッセージが追加されているため、currentStateをそのまま使用
       const currentState = queryClient.getQueryData<ChatState>(['chat', tabId]);
       const messages = currentState?.messages ?? [];
+
+      startKeepalive();
 
       await chrome.runtime.sendMessage({
         type: 'CHAT',
@@ -47,6 +51,7 @@ export function useSendMessage(
         queryClient.setQueryData(['chat', tabId], context.previousState);
       }
       setIsStreaming(false);
+      stopKeepalive();
     },
   });
 }

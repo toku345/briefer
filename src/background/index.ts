@@ -2,12 +2,33 @@ import { addMessage, getChatState, setPageContent } from '../lib/chat-store';
 import { fetchModels, streamChat } from '../lib/llm-client';
 import { getSelectedModel } from '../lib/settings-store';
 import { ThinkTagFilter } from '../lib/think-tag-filter';
-import type { ChatMessage, StreamChunk, SummarizeRequest } from '../lib/types';
+import {
+  type ChatMessage,
+  KEEPALIVE_PORT_NAME,
+  type PortMessage,
+  type StreamChunk,
+  type SummarizeRequest,
+} from '../lib/types';
 
 // 送信元が自拡張機能であることを検証（他の拡張機能からの不正なメッセージを拒否）
 function isValidSender(sender: chrome.runtime.MessageSender): boolean {
   return sender.id === chrome.runtime.id;
 }
+
+// Keepalive ポート: Side Panel からの定期 ping で Service Worker のアイドルタイムアウトを防止
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== KEEPALIVE_PORT_NAME) return;
+
+  port.onMessage.addListener((msg: PortMessage) => {
+    if (msg.type === 'KEEPALIVE_PING') {
+      try {
+        port.postMessage({ type: 'KEEPALIVE_PONG' } satisfies PortMessage);
+      } catch {
+        // ポートが既に切断されている場合は無視
+      }
+    }
+  });
+});
 
 // デフォルトで Side Panel を無効化（明示的に開いたタブでのみ有効にする）
 chrome.sidePanel.setOptions({ enabled: false }).catch((err) => {
