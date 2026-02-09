@@ -129,4 +129,22 @@ describe('useKeepalive', () => {
 
     expect(mockPort.postMessage).toHaveBeenCalledTimes(1);
   });
+
+  it('アンマウント時にポートとタイマーをクリーンアップする', () => {
+    const { result, unmount } = renderHook(() => useKeepalive());
+
+    act(() => {
+      result.current.startKeepalive();
+    });
+
+    unmount();
+
+    expect(mockPort.disconnect).toHaveBeenCalled();
+
+    act(() => {
+      vi.advanceTimersByTime(20_000);
+    });
+
+    expect(mockPort.postMessage).toHaveBeenCalledTimes(1);
+  });
 });

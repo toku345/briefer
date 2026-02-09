@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { KEEPALIVE_PORT_NAME, type PortMessage } from '@/lib/types';
 
 const PING_INTERVAL_MS = 20_000;
@@ -46,6 +46,9 @@ export function useKeepalive() {
       stopKeepalive();
     }
   }, [stopKeepalive]);
+
+  // アンマウント時にポート・タイマーを確実にクリーンアップ
+  useEffect(() => stopKeepalive, [stopKeepalive]);
 
   return { startKeepalive, stopKeepalive };
 }
