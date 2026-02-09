@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ChatState, ExtractedContent, SummarizeRequest } from '../src/lib/types';
 
-// メッセージリスナーを保持
+// リスナーを保持
 let messageListener: (
   message: unknown,
   sender: chrome.runtime.MessageSender,
@@ -9,6 +9,7 @@ let messageListener: (
 ) => boolean | undefined;
 
 let actionClickedListener: (tab: chrome.tabs.Tab) => void;
+let connectListener: (port: chrome.runtime.Port) => void;
 
 // モックストレージ
 const mockStorage: Record<string, ChatState> = {};
@@ -21,6 +22,11 @@ const mockChrome = {
     onMessage: {
       addListener: vi.fn((listener) => {
         messageListener = listener;
+      }),
+    },
+    onConnect: {
+      addListener: vi.fn((listener) => {
+        connectListener = listener;
       }),
     },
     sendMessage: vi.fn(),
@@ -402,6 +408,37 @@ describe('background service worker', () => {
 
       // flush()により不完全なタグ "<thi" も出力される
       expect(streamChunks.join('')).toBe('テスト<thi');
+    });
+  });
+
+  describe('Keepalive ポート', () => {
+    it('PING に対して PONG を返す', () => {
+      const mockPort = {
+        name: 'briefer-keepalive',
+        onMessage: { addListener: vi.fn() },
+        onDisconnect: { addListener: vi.fn() },
+        postMessage: vi.fn(),
+      };
+
+      connectListener(mockPort as unknown as chrome.runtime.Port);
+
+      const portMessageListener = mockPort.onMessage.addListener.mock.calls[0][0];
+      portMessageListener({ type: 'KEEPALIVE_PING' });
+
+      expect(mockPort.postMessage).toHaveBeenCalledWith({ type: 'KEEPALIVE_PONG' });
+    });
+
+    it('無関係なポート名は無視する', () => {
+      const mockPort = {
+        name: 'other-port',
+        onMessage: { addListener: vi.fn() },
+        onDisconnect: { addListener: vi.fn() },
+        postMessage: vi.fn(),
+      };
+
+      connectListener(mockPort as unknown as chrome.runtime.Port);
+
+      expect(mockPort.onMessage.addListener).not.toHaveBeenCalled();
     });
   });
 });

@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { InputContainer } from './components/InputContainer';
 import { useChatHistory } from './hooks/useChatHistory';
 import { useCurrentTab } from './hooks/useCurrentTab';
+import { useKeepalive } from './hooks/useKeepalive';
 import { usePageContent } from './hooks/usePageContent';
 import { useSendMessage } from './hooks/useSendMessage';
 import { useStreamListener } from './hooks/useStreamListener';
@@ -11,17 +12,19 @@ export function App() {
   const { tabId, error: tabError } = useCurrentTab();
   const { data: pageContent, error: contentError } = usePageContent(tabId);
   const { data: chatState } = useChatHistory(tabId);
+  const { startKeepalive, stopKeepalive } = useKeepalive();
   const {
     streamingContent,
     isStreaming,
     setIsStreaming,
     error: streamError,
     clearError,
-  } = useStreamListener(tabId);
+  } = useStreamListener(tabId, stopKeepalive);
   const { mutate: sendMessage, isPending } = useSendMessage(
     tabId,
     pageContent ?? null,
     setIsStreaming,
+    startKeepalive,
   );
 
   const messages = chatState?.messages ?? [];
