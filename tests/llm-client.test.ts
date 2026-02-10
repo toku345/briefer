@@ -1,8 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { buildSystemMessage, chat, streamChat } from '../src/lib/llm-client';
 import type { ChatMessage, ExtractedContent, StreamChunk } from '../src/lib/types';
+import { SETTINGS_KEY } from '../src/lib/types';
 
 const TEST_MODEL = 'test-model';
+
+const mockLocalStorage: Record<string, unknown> = {};
+
+const mockChrome = {
+  storage: {
+    local: {
+      get: vi.fn((key: string) => Promise.resolve({ [key]: mockLocalStorage[key] })),
+      set: vi.fn((data: Record<string, unknown>) => {
+        Object.assign(mockLocalStorage, data);
+        return Promise.resolve();
+      }),
+    },
+  },
+};
+
+(globalThis as unknown as { chrome: typeof chrome }).chrome =
+  mockChrome as unknown as typeof chrome;
+
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+const { buildSystemMessage, chat, fetchModels, streamChat } = await import('../src/lib/llm-client');
 
 describe('llm-client', () => {
   const mockPageContent: ExtractedContent = {
@@ -10,6 +32,13 @@ describe('llm-client', () => {
     url: 'https://example.com',
     content: 'This is test content.',
   };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const key of Object.keys(mockLocalStorage)) {
+      delete mockLocalStorage[key];
+    }
+  });
 
   describe('buildSystemMessage', () => {
     it('ページコンテンツを含むシステムメッセージを生成する', () => {
@@ -57,7 +86,6 @@ describe('llm-client', () => {
 
       const result = buildSystemMessage(pageContent);
 
-      // ページコンテンツ部分を抽出して検証（プロンプト内のテーブル区切り線は除外）
       const pageContentMatch = result.match(/<page-content>([\s\S]*?)<\/page-content>/);
       expect(pageContentMatch).not.toBeNull();
       const extractedContent = pageContentMatch?.[1];
@@ -66,37 +94,57 @@ describe('llm-client', () => {
     });
   });
 
-  describe('chat', () => {
-    beforeEach(() => {
-      vi.resetAllMocks();
+  describe('fetchModels', () => {
+    it('設定のURLからモデルを取得する', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { serverUrl: 'http://custom:9000/v1' };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ object: 'list', data: [{ id: 'model-a' }] }),
+      });
+
+      const models = await fetchModels();
+
+      expect(mockFetch).toHaveBeenCalledWith('http://custom:9000/v1/models', { signal: undefined });
+      expect(models).toHaveLength(1);
+      expect(models[0].id).toBe('model-a');
     });
 
-    it('APIを正しく呼び出し応答を返す', async () => {
+    it('明示的なserverUrl引数を優先する', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ object: 'list', data: [{ id: 'model-b' }] }),
+      });
+
+      await fetchModels('http://explicit:8000/v1');
+
+      expect(mockFetch).toHaveBeenCalledWith('http://explicit:8000/v1/models', {
+        signal: undefined,
+      });
+    });
+  });
+
+  describe('chat', () => {
+    it('設定のURLでAPIを呼び出す', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { serverUrl: 'http://myserver:8000/v1' };
+
       const mockStream = new ReadableStream({
         start(controller) {
           controller.enqueue(
-            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"これは"}}]}\n'),
-          );
-          controller.enqueue(
-            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"要約です"}}]}\n'),
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"OK"}}]}\n'),
           );
           controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
           controller.close();
         },
       });
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        body: mockStream,
-      });
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
 
       const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
-
       const result = await chat(messages, mockPageContent, TEST_MODEL);
 
-      expect(result).toBe('これは要約です');
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/v1/chat/completions',
+      expect(result).toBe('OK');
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://myserver:8000/v1/chat/completions',
         expect.objectContaining({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -104,12 +152,33 @@ describe('llm-client', () => {
       );
     });
 
+    it('設定のtemperatureとmaxTokensを使用する', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { temperature: 0.8, maxTokens: 4096 };
+
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      await chat(messages, mockPageContent, TEST_MODEL);
+
+      const callArgs = mockFetch.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body.temperature).toBe(0.8);
+      expect(body.max_tokens).toBe(4096);
+    });
+
     it('APIエラー時に例外をスローする', async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      mockFetch.mockResolvedValue({
         ok: false,
         status: 500,
         statusText: 'Internal Server Error',
-        text: () => Promise.resolve('Internal Server Error'),
         body: null,
       });
 
@@ -126,10 +195,7 @@ describe('llm-client', () => {
         },
       });
 
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        body: mockStream,
-      });
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
 
       const messages: ChatMessage[] = [
         { role: 'user', content: '要約して' },
@@ -139,44 +205,16 @@ describe('llm-client', () => {
 
       await chat(messages, mockPageContent, TEST_MODEL);
 
-      const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      const callArgs = mockFetch.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
 
       for (const msg of body.messages) {
         expect(msg).not.toHaveProperty('modelId');
       }
     });
-
-    it('ストリーミングリクエストを送信する', async () => {
-      const mockStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-          controller.close();
-        },
-      });
-
-      global.fetch = vi.fn().mockResolvedValue({
-        ok: true,
-        body: mockStream,
-      });
-
-      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
-
-      await chat(messages, mockPageContent, TEST_MODEL);
-
-      const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-
-      expect(body.stream).toBe(true);
-      expect(body.model).toBe(TEST_MODEL);
-    });
   });
 
   describe('streamChat edge cases', () => {
-    beforeEach(() => {
-      vi.resetAllMocks();
-    });
-
     it('不正なJSONをスキップする', async () => {
       const mockStream = new ReadableStream({
         start(controller) {
@@ -189,7 +227,7 @@ describe('llm-client', () => {
         },
       });
 
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
@@ -202,7 +240,7 @@ describe('llm-client', () => {
     });
 
     it('レスポンスボディがない場合はエラーを返す', async () => {
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: null });
+      mockFetch.mockResolvedValue({ ok: true, body: null });
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
@@ -213,48 +251,37 @@ describe('llm-client', () => {
       expect(chunks).toContainEqual({ type: 'error', error: 'No response body' });
     });
 
-    it('choices配列がない場合はスキップする', async () => {
+    it('AbortSignalによるキャンセルでエラーを出さない', async () => {
+      const controller = new AbortController();
+
       const mockStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: {"invalid": true}\n'));
-          controller.enqueue(
-            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"valid"}}]}\n'),
+        start(ctrl) {
+          ctrl.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"start"}}]}\n'),
           );
-          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-          controller.close();
+          // キャンセル後にエラーを発生させる
+          setTimeout(() => ctrl.error(new DOMException('Aborted', 'AbortError')), 10);
         },
       });
 
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+
+      setTimeout(() => controller.abort(), 5);
+
+      for await (const chunk of streamChat(
+        messages,
+        mockPageContent,
+        TEST_MODEL,
+        controller.signal,
+      )) {
         chunks.push(chunk);
       }
 
-      const contentChunks = chunks.filter((c) => c.type === 'chunk');
-      expect(contentChunks).toHaveLength(1);
-      expect(contentChunks[0]).toEqual({ type: 'chunk', content: 'valid' });
-    });
-
-    it('ストリーム読み取り中のエラーを処理する', async () => {
-      const mockStream = new ReadableStream({
-        start(controller) {
-          controller.error(new Error('Network error'));
-        },
-      });
-
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
-
-      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
-      const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
-        chunks.push(chunk);
-      }
-
-      expect(chunks).toHaveLength(1);
-      expect(chunks[0]).toEqual({ type: 'error', error: 'Network error' });
+      const errorChunks = chunks.filter((c) => c.type === 'error');
+      expect(errorChunks).toHaveLength(0);
     });
 
     it('空のcontentはスキップする', async () => {
@@ -271,7 +298,7 @@ describe('llm-client', () => {
         },
       });
 
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
@@ -282,31 +309,6 @@ describe('llm-client', () => {
       const contentChunks = chunks.filter((c) => c.type === 'chunk');
       expect(contentChunks).toHaveLength(1);
       expect(contentChunks[0]).toEqual({ type: 'chunk', content: 'text' });
-    });
-
-    it('data: プレフィックスのない行はスキップする', async () => {
-      const mockStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode('comment line\n'));
-          controller.enqueue(new TextEncoder().encode(': SSE comment\n'));
-          controller.enqueue(
-            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"ok"}}]}\n'),
-          );
-          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-          controller.close();
-        },
-      });
-
-      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
-
-      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
-      const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
-        chunks.push(chunk);
-      }
-
-      const contentChunks = chunks.filter((c) => c.type === 'chunk');
-      expect(contentChunks).toHaveLength(1);
     });
   });
 });

@@ -18,10 +18,8 @@ const mockChrome = {
 (globalThis as unknown as { chrome: typeof chrome }).chrome =
   mockChrome as unknown as typeof chrome;
 
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
-
-const { getSelectedModel } = await import('../src/lib/settings-store');
+const { getSelectedModel, getServerUrl, getSettings, saveSelectedModel, saveSettings } =
+  await import('../src/lib/settings-store');
 
 describe('settings-store', () => {
   beforeEach(() => {
@@ -31,81 +29,87 @@ describe('settings-store', () => {
     }
   });
 
+  describe('getSettings', () => {
+    it('未保存時はデフォルト値を返す', async () => {
+      const settings = await getSettings();
+
+      expect(settings).toEqual({
+        serverUrl: 'http://localhost:8000/v1',
+        selectedModel: null,
+        temperature: 0.3,
+        maxTokens: 2048,
+      });
+    });
+
+    it('保存済み設定とデフォルトをマージする', async () => {
+      mockLocalStorage[SETTINGS_KEY] = {
+        serverUrl: 'http://localhost:9000/v1',
+        selectedModel: 'org/model-a',
+      };
+
+      const settings = await getSettings();
+
+      expect(settings.serverUrl).toBe('http://localhost:9000/v1');
+      expect(settings.selectedModel).toBe('org/model-a');
+      expect(settings.temperature).toBe(0.3);
+      expect(settings.maxTokens).toBe(2048);
+    });
+  });
+
+  describe('saveSettings', () => {
+    it('部分的に設定を更新する', async () => {
+      const result = await saveSettings({ temperature: 0.7 });
+
+      expect(result.temperature).toBe(0.7);
+      expect(result.serverUrl).toBe('http://localhost:8000/v1');
+      expect(mockChrome.storage.local.set).toHaveBeenCalled();
+    });
+
+    it('複数フィールドを同時に更新する', async () => {
+      const result = await saveSettings({
+        serverUrl: 'http://remote:8000/v1',
+        maxTokens: 4096,
+      });
+
+      expect(result.serverUrl).toBe('http://remote:8000/v1');
+      expect(result.maxTokens).toBe(4096);
+    });
+  });
+
+  describe('getServerUrl', () => {
+    it('サーバーURLを返す', async () => {
+      const url = await getServerUrl();
+      expect(url).toBe('http://localhost:8000/v1');
+    });
+
+    it('保存済みURLを返す', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { serverUrl: 'http://custom:8080/v1' };
+
+      const url = await getServerUrl();
+      expect(url).toBe('http://custom:8080/v1');
+    });
+  });
+
   describe('getSelectedModel', () => {
-    it('保存されたモデルが利用可能な場合はそのモデルを返す', async () => {
-      mockLocalStorage[SETTINGS_KEY] = { selectedModel: 'org/model-a' };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({ object: 'list', data: [{ id: 'org/model-a' }, { id: 'org/model-b' }] }),
-      });
-
-      const result = await getSelectedModel();
-
-      expect(result).toBe('org/model-a');
+    it('未保存時はnullを返す', async () => {
+      const model = await getSelectedModel();
+      expect(model).toBeNull();
     });
 
-    it('保存されたモデルが利用不可の場合は最初のモデルにリセットする', async () => {
-      mockLocalStorage[SETTINGS_KEY] = { selectedModel: 'org/deleted-model' };
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () =>
-          Promise.resolve({ object: 'list', data: [{ id: 'org/model-x' }, { id: 'org/model-y' }] }),
-      });
+    it('保存済みモデルを返す', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { selectedModel: 'org/model-x' };
 
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const result = await getSelectedModel();
-
-      expect(result).toBe('org/model-x');
-      expect(mockLocalStorage[SETTINGS_KEY]).toEqual({ selectedModel: 'org/model-x' });
-      expect(consoleWarn).toHaveBeenCalledWith(expect.stringContaining('org/deleted-model'));
-
-      consoleWarn.mockRestore();
+      const model = await getSelectedModel();
+      expect(model).toBe('org/model-x');
     });
+  });
 
-    it('設定が未保存の場合はデフォルトモデルを選択して保存する', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ object: 'list', data: [{ id: 'org/default-model' }] }),
-      });
+  describe('saveSelectedModel', () => {
+    it('モデルを保存する', async () => {
+      await saveSelectedModel('org/new-model');
 
-      const result = await getSelectedModel();
-
-      expect(result).toBe('org/default-model');
-      expect(mockLocalStorage[SETTINGS_KEY]).toEqual({ selectedModel: 'org/default-model' });
-    });
-
-    it('利用可能なモデルが空の場合はエラーをスローする', async () => {
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ object: 'list', data: [] }),
-      });
-
-      await expect(getSelectedModel()).rejects.toThrow('No models available');
-    });
-
-    it('fetchModels失敗時に保存済みモデルがあればフォールバックする', async () => {
-      mockLocalStorage[SETTINGS_KEY] = { selectedModel: 'org/saved-model' };
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-      const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
-      const result = await getSelectedModel();
-
-      expect(result).toBe('org/saved-model');
-      expect(consoleWarn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to validate model'),
-        'org/saved-model',
-      );
-
-      consoleWarn.mockRestore();
-    });
-
-    it('fetchModels失敗時に保存済みモデルがなければエラーをスローする', async () => {
-      mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-      await expect(getSelectedModel()).rejects.toThrow('Network error');
+      const saved = mockLocalStorage[SETTINGS_KEY] as Record<string, unknown>;
+      expect(saved.selectedModel).toBe('org/new-model');
     });
   });
 });
