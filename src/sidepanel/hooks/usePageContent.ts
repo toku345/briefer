@@ -1,42 +1,63 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ContentResponse, ExtractedContent } from '@/lib/types';
+import type { ExtractedContent } from '@/lib/types';
 
-// executeScript完了後、リスナー登録には非同期の遅延があり即sendMessageすると接続エラーになる
-const CONTENT_SCRIPT_INIT_MS = 100;
+// chrome.scripting.executeScript に渡す自己完結型の抽出関数
+// シリアライズされて Content Script コンテキストで実行されるため、外部参照不可
+function extractFromPage(): ExtractedContent {
+  const title = document.title || '';
+  const url = document.location?.href || '';
 
-async function requestContent(tabId: number): Promise<ExtractedContent> {
-  const response = (await chrome.tabs.sendMessage(tabId, {
-    type: 'GET_CONTENT',
-  })) as ContentResponse | undefined;
-
-  if (!response) {
-    throw new Error('ページからの応答がありませんでした');
+  function cleanText(text: string | null): string {
+    if (!text) return '';
+    return text.replace(/\s+/g, ' ').trim().slice(0, 10000);
   }
 
-  if (response.success) {
-    return response.data;
+  function extractByPriority(): string {
+    const article = document.querySelector('article');
+    if (article) return cleanText(article.textContent);
+
+    const main = document.querySelector('main');
+    if (main) return cleanText(main.textContent);
+
+    const roleMain = document.querySelector('[role="main"]');
+    if (roleMain) return cleanText(roleMain.textContent);
+
+    const contentSelectors = [
+      '.post-content',
+      '.article-content',
+      '.entry-content',
+      '#content',
+      '.content',
+    ];
+    for (const selector of contentSelectors) {
+      const el = document.querySelector(selector);
+      if (el) return cleanText(el.textContent);
+    }
+
+    // フォールバック: body全体（不要要素除去）
+    const clone = document.body.cloneNode(true) as HTMLElement;
+    const removeSelectors = [
+      'script',
+      'style',
+      'nav',
+      'header',
+      'footer',
+      'aside',
+      'noscript',
+      'iframe',
+      '[role="navigation"]',
+      '[role="banner"]',
+      '[role="contentinfo"]',
+    ];
+    for (const sel of removeSelectors) {
+      for (const el of clone.querySelectorAll(sel)) {
+        el.remove();
+      }
+    }
+    return cleanText(clone.textContent);
   }
 
-  if (response.error.includes('Cannot access') || response.error.includes('chrome://')) {
-    throw new Error('このページでは使用できません');
-  }
-  throw new Error(response.error);
-}
-
-async function injectContentScript(tabId: number): Promise<void> {
-  await chrome.scripting.executeScript({
-    target: { tabId },
-    files: ['content/index.js'],
-  });
-  await new Promise((resolve) => setTimeout(resolve, CONTENT_SCRIPT_INIT_MS));
-}
-
-function isContentScriptMissing(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  return (
-    error.message.includes('Could not establish connection') ||
-    error.message.includes('message port closed')
-  );
+  return { title, content: extractByPriority(), url };
 }
 
 export function usePageContent(tabId: number | null) {
@@ -46,12 +67,24 @@ export function usePageContent(tabId: number | null) {
       if (!tabId) throw new Error('タブIDがありません');
 
       try {
-        return await requestContent(tabId);
-      } catch (error) {
-        if (!isContentScriptMissing(error)) throw error;
+        const [result] = await chrome.scripting.executeScript({
+          target: { tabId },
+          func: extractFromPage,
+        });
 
-        await injectContentScript(tabId);
-        return await requestContent(tabId);
+        if (!result?.result) {
+          throw new Error('ページからの応答がありませんでした');
+        }
+
+        return result.result as ExtractedContent;
+      } catch (error) {
+        if (
+          error instanceof Error &&
+          (error.message.includes('Cannot access') || error.message.includes('chrome://'))
+        ) {
+          throw new Error('このページでは使用できません');
+        }
+        throw error;
       }
     },
     enabled: !!tabId,
