@@ -210,6 +210,22 @@ body {
   cursor: not-allowed;
 }
 
+.cancel-btn {
+  padding: 10px 16px;
+  background: #cc3333;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cancel-btn:hover {
+  background: #aa2222;
+}
+
 /* Markdown styles for assistant messages */
 .message.assistant h2 {
   font-size: 14px;

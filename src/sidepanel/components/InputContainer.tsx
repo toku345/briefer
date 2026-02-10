@@ -2,11 +2,19 @@ import { type KeyboardEvent, useCallback, useRef, useState } from 'react';
 
 interface InputContainerProps {
   onSend: (content: string) => void;
+  onCancel: () => void;
+  isStreaming: boolean;
   disabled: boolean;
   defaultValue?: string;
 }
 
-export function InputContainer({ onSend, disabled, defaultValue = '' }: InputContainerProps) {
+export function InputContainer({
+  onSend,
+  onCancel,
+  isStreaming,
+  disabled,
+  defaultValue = '',
+}: InputContainerProps) {
   const [value, setValue] = useState(defaultValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -52,9 +60,15 @@ export function InputContainer({ onSend, disabled, defaultValue = '' }: InputCon
         placeholder="メッセージを入力..."
         rows={1}
       />
-      <button id="send-btn" type="button" onClick={handleSend} disabled={disabled}>
-        送信
-      </button>
+      {isStreaming ? (
+        <button id="cancel-btn" type="button" onClick={onCancel} className="cancel-btn">
+          停止
+        </button>
+      ) : (
+        <button id="send-btn" type="button" onClick={handleSend} disabled={disabled}>
+          送信
+        </button>
+      )}
     </footer>
   );
 }
