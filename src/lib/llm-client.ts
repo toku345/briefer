@@ -1,8 +1,5 @@
 import type { ChatMessage, ExtractedContent, ModelInfo, StreamChunk } from './types';
 
-// ローカル環境のvLLMサーバーを使用（本番環境では環境変数から取得する想定）
-const VLLM_BASE_URL = 'http://localhost:8000/v1';
-
 // XMLの特殊文字をエスケープ
 function escapeXml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -52,8 +49,8 @@ interface ChatCompletionRequest {
   stream?: boolean;
 }
 
-export async function fetchModels(): Promise<ModelInfo[]> {
-  const response = await fetch(`${VLLM_BASE_URL}/models`);
+export async function fetchModels(baseUrl: string): Promise<ModelInfo[]> {
+  const response = await fetch(`${baseUrl}/models`);
   if (!response.ok) {
     throw new Error(`Failed to fetch models: ${response.status}`);
   }
@@ -114,6 +111,8 @@ export async function* streamChat(
   messages: ChatMessage[],
   pageContent: ExtractedContent,
   model: string,
+  baseUrl: string,
+  signal?: AbortSignal,
 ): AsyncGenerator<StreamChunk> {
   const systemMessage = buildSystemMessage(pageContent);
 
@@ -128,12 +127,13 @@ export async function* streamChat(
     stream: true,
   };
 
-  const response = await fetch(`${VLLM_BASE_URL}/chat/completions`, {
+  const response = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(request),
+    signal,
   });
 
   if (!response.ok) {
@@ -198,9 +198,11 @@ export async function chat(
   messages: ChatMessage[],
   pageContent: ExtractedContent,
   model: string,
+  baseUrl: string,
+  signal?: AbortSignal,
 ): Promise<string> {
   let result = '';
-  for await (const chunk of streamChat(messages, pageContent, model)) {
+  for await (const chunk of streamChat(messages, pageContent, model, baseUrl, signal)) {
     if (chunk.type === 'chunk' && chunk.content) {
       result += chunk.content;
     } else if (chunk.type === 'error') {

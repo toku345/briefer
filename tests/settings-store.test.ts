@@ -21,7 +21,13 @@ const mockChrome = {
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-const { getSelectedModel } = await import('../src/lib/settings-store');
+const {
+  getSelectedModel,
+  getVllmBaseUrl,
+  saveVllmBaseUrl,
+  saveSelectedModel,
+  DEFAULT_VLLM_BASE_URL,
+} = await import('../src/lib/settings-store');
 
 describe('settings-store', () => {
   beforeEach(() => {
@@ -106,6 +112,63 @@ describe('settings-store', () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
       await expect(getSelectedModel()).rejects.toThrow('Network error');
+    });
+
+    it('saveSelectedModelが既存設定とマージする', async () => {
+      mockLocalStorage[SETTINGS_KEY] = {
+        selectedModel: 'org/old-model',
+        vllmBaseUrl: 'http://custom:9000/v1',
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            object: 'list',
+            data: [{ id: 'org/old-model' }, { id: 'org/new-model' }],
+          }),
+      });
+
+      await saveSelectedModel('org/new-model');
+
+      const saved = mockLocalStorage[SETTINGS_KEY] as Record<string, unknown>;
+      expect(saved.selectedModel).toBe('org/new-model');
+      expect(saved.vllmBaseUrl).toBe('http://custom:9000/v1');
+    });
+  });
+
+  describe('getVllmBaseUrl', () => {
+    it('未設定の場合はデフォルト値を返す', async () => {
+      const result = await getVllmBaseUrl();
+      expect(result).toBe(DEFAULT_VLLM_BASE_URL);
+    });
+
+    it('保存された値がある場合はその値を返す', async () => {
+      mockLocalStorage[SETTINGS_KEY] = {
+        selectedModel: 'org/model',
+        vllmBaseUrl: 'http://custom:9000/v1',
+      };
+
+      const result = await getVllmBaseUrl();
+      expect(result).toBe('http://custom:9000/v1');
+    });
+  });
+
+  describe('saveVllmBaseUrl', () => {
+    it('URLを保存する', async () => {
+      await saveVllmBaseUrl('http://custom:9000/v1');
+
+      const saved = mockLocalStorage[SETTINGS_KEY] as Record<string, unknown>;
+      expect(saved.vllmBaseUrl).toBe('http://custom:9000/v1');
+    });
+
+    it('既存設定とマージする', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { selectedModel: 'org/model' };
+
+      await saveVllmBaseUrl('http://custom:9000/v1');
+
+      const saved = mockLocalStorage[SETTINGS_KEY] as Record<string, unknown>;
+      expect(saved.selectedModel).toBe('org/model');
+      expect(saved.vllmBaseUrl).toBe('http://custom:9000/v1');
     });
   });
 });

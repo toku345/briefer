@@ -3,6 +3,7 @@ import { buildSystemMessage, chat, streamChat } from '../src/lib/llm-client';
 import type { ChatMessage, ExtractedContent, StreamChunk } from '../src/lib/types';
 
 const TEST_MODEL = 'test-model';
+const TEST_BASE_URL = 'http://localhost:8000/v1';
 
 describe('llm-client', () => {
   const mockPageContent: ExtractedContent = {
@@ -92,7 +93,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
 
-      const result = await chat(messages, mockPageContent, TEST_MODEL);
+      const result = await chat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL);
 
       expect(result).toBe('これは要約です');
       expect(fetch).toHaveBeenCalledWith(
@@ -115,7 +116,9 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
 
-      await expect(chat(messages, mockPageContent, TEST_MODEL)).rejects.toThrow('API error: 500');
+      await expect(chat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL)).rejects.toThrow(
+        'API error: 500',
+      );
     });
 
     it('modelIdを含むメッセージからAPIリクエスト時にmodelIdを除外する', async () => {
@@ -137,7 +140,7 @@ describe('llm-client', () => {
         { role: 'user', content: '続けて' },
       ];
 
-      await chat(messages, mockPageContent, TEST_MODEL);
+      await chat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL);
 
       const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
@@ -162,7 +165,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
 
-      await chat(messages, mockPageContent, TEST_MODEL);
+      await chat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL);
 
       const callArgs = (fetch as ReturnType<typeof vi.fn>).mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
@@ -193,7 +196,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL)) {
         chunks.push(chunk);
       }
 
@@ -206,7 +209,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL)) {
         chunks.push(chunk);
       }
 
@@ -229,7 +232,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL)) {
         chunks.push(chunk);
       }
 
@@ -249,7 +252,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL)) {
         chunks.push(chunk);
       }
 
@@ -275,7 +278,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL)) {
         chunks.push(chunk);
       }
 
@@ -301,12 +304,62 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
       const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL)) {
         chunks.push(chunk);
       }
 
       const contentChunks = chunks.filter((c) => c.type === 'chunk');
       expect(contentChunks).toHaveLength(1);
+    });
+
+    it('AbortSignalでリクエストを中断する', async () => {
+      const abortController = new AbortController();
+      abortController.abort();
+
+      global.fetch = vi
+        .fn()
+        .mockRejectedValue(new DOMException('The operation was aborted.', 'AbortError'));
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+
+      await expect(
+        chat(messages, mockPageContent, TEST_MODEL, TEST_BASE_URL, abortController.signal),
+      ).rejects.toThrow('The operation was aborted.');
+
+      expect(fetch).toHaveBeenCalledWith(
+        `${TEST_BASE_URL}/chat/completions`,
+        expect.objectContaining({ signal: abortController.signal }),
+      );
+    });
+
+    it('AbortSignalをfetchに渡す', async () => {
+      const abortController = new AbortController();
+
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(
+        messages,
+        mockPageContent,
+        TEST_MODEL,
+        TEST_BASE_URL,
+        abortController.signal,
+      )) {
+        chunks.push(chunk);
+      }
+
+      expect(fetch).toHaveBeenCalledWith(
+        `${TEST_BASE_URL}/chat/completions`,
+        expect.objectContaining({ signal: abortController.signal }),
+      );
     });
   });
 });

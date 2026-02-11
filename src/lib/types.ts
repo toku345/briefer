@@ -46,7 +46,9 @@ export type MessageType =
   | { type: 'CHAT'; tabId: number; payload: SummarizeRequest }
   | { type: 'STREAM_CHUNK'; tabId: number; payload: StreamChunk }
   | { type: 'GET_CHAT_STATE'; tabId: number }
-  | { type: 'GET_MODELS' };
+  | { type: 'GET_MODELS' }
+  | { type: 'CANCEL_CHAT'; tabId: number }
+  | { type: 'SELECTED_TEXT'; text: string };
 
 // Chrome runtime message response types
 export interface GetModelsResponse {
@@ -57,6 +59,11 @@ export interface GetModelsResponse {
 
 // Settings storage key (shared constant)
 export const SETTINGS_KEY = 'briefer_settings';
+
+export interface Settings {
+  selectedModel: string;
+  vllmBaseUrl?: string;
+}
 
 // Port-based keepalive (MV3 Service Worker のアイドルタイムアウト対策)
 export type PortMessage = { type: 'KEEPALIVE_PING' } | { type: 'KEEPALIVE_PONG' };
