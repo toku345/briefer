@@ -1,18 +1,18 @@
-# CLAUDE.md
+# Agent Guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+このファイルは、このリポジトリで作業する AI コーディングエージェント向けの開発ガイドです。
 
 ## プロジェクト概要
 
-BrieferはローカルLLM（vLLM）を使用してWebページを要約・チャットできるChrome拡張機能（Manifest V3）。
+Briefer はローカル LLM（vLLM）を使って Web ページを要約・チャットできる Chrome 拡張機能（Manifest V3）。
 
 ## コマンド
 
 ```bash
-bun install              # 依存関係インストール
+bun install              # 依存関係のインストール
 bun run build            # ビルド（型チェック + Vite）
 bun run dev              # 開発モード（ファイル監視）
-bun run test             # テスト実行（vitestを使用）
+bun run test             # テスト実行（Vitest）
 bun run test <file>      # 単一ファイルのテスト
 bun run typecheck        # 型チェックのみ
 bun run lint             # Lintチェック
@@ -22,7 +22,7 @@ bun run check:fix        # Lint + フォーマット自動修正
 
 ## コミット前チェック
 
-コミット作成前に以下のコマンドが全てパスすることを確認する:
+コミット前に以下のコマンドがすべて成功すること:
 
 ```bash
 bun run typecheck    # 型チェック
@@ -33,7 +33,9 @@ bun run test         # テスト
 ## 拡張機能の読み込み
 
 1. `bun run build` でビルド
-2. `chrome://extensions` → デベロッパーモード → 「パッケージ化されていない拡張機能を読み込む」 → `dist`フォルダ選択
+2. `chrome://extensions` を開く
+3. デベロッパーモードを有効化
+4. 「パッケージ化されていない拡張機能を読み込む」から `dist` を選択
 
 ## アーキテクチャ
 
@@ -61,7 +63,7 @@ bun run test         # テスト
 - **Side Panel → Service Worker**: `chrome.runtime.sendMessage({ type: 'CHAT', tabId, payload })`
 - **Service Worker → Side Panel**: `chrome.runtime.sendMessage({ type: 'STREAM_CHUNK', tabId, payload })`
 
-重要: Side Panelからのメッセージでは`sender.tab`がundefinedになるため、メッセージに`tabId`を含める必要がある。
+注意: Side Panel からのメッセージでは `sender.tab` が `undefined` になる。必ずメッセージの payload に `tabId` を含めること。
 
 ### 主要ファイル
 
@@ -83,4 +85,4 @@ bun run test         # テスト
 const VLLM_BASE_URL = 'http://localhost:8000/v1';
 ```
 
-モデルはvLLMサーバーから利用可能なモデルを動的に取得し、UIで選択可能。
+モデルは vLLM サーバーから動的に取得し、UI 上で選択可能。
