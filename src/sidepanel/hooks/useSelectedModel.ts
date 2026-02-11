@@ -1,33 +1,50 @@
 import { useCallback, useEffect, useState } from 'react';
-import { SETTINGS_KEY } from '@/lib/types';
+import type { GetSelectedModelResponse, SetSelectedModelResponse } from '@/lib/types';
 
 export function useSelectedModel() {
   const [model, setModel] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    chrome.storage.local
-      .get(SETTINGS_KEY)
+    chrome.runtime
+      .sendMessage({ type: 'GET_SELECTED_MODEL' })
       .then((result) => {
-        const settings = result[SETTINGS_KEY] as { selectedModel?: string } | undefined;
-        setModel(settings?.selectedModel ?? null);
+        const response = result as GetSelectedModelResponse;
+        if (!response.success) {
+          throw new Error(response.error ?? 'Failed to load selected model');
+        }
+        setModel(response.data);
+        setError(null);
       })
       .catch((error) => {
         console.error('[Briefer] Failed to load selected model:', error);
+        setError(error instanceof Error ? error.message : 'モデル設定の読み込みに失敗しました');
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
   }, []);
 
   const selectModel = useCallback(async (modelId: string) => {
     try {
-      const result = await chrome.storage.local.get(SETTINGS_KEY);
-      const settings = (result[SETTINGS_KEY] as { selectedModel?: string } | undefined) ?? {};
-      const newSettings = { ...settings, selectedModel: modelId };
-      await chrome.storage.local.set({ [SETTINGS_KEY]: newSettings });
-      setModel(modelId);
+      const response = (await chrome.runtime.sendMessage({
+        type: 'SET_SELECTED_MODEL',
+        modelId,
+      })) as SetSelectedModelResponse;
+
+      if (!response.success) {
+        throw new Error(response.error ?? 'Failed to save selected model');
+      }
+
+      setModel(response.data.selectedModel);
+      setError(null);
     } catch (error) {
       console.error('[Briefer] Failed to save selected model:', error);
+      setError(error instanceof Error ? error.message : 'モデル設定の保存に失敗しました');
       throw error;
     }
   }, []);
 
-  return { model, selectModel };
+  return { model, selectModel, isLoading, error };
 }

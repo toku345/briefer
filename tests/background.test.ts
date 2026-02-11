@@ -73,6 +73,7 @@ global.fetch = mockFetch;
 
 // モジュールをインポート（モック設定後）
 await import('../src/background/index');
+const { resetSettingsCacheForTest } = await import('../src/lib/settings-store');
 
 // モジュール初期化時の setOptions 呼び出しを記録
 const initialSetOptionsCall = mockChrome.sidePanel.setOptions.mock.calls[0];
@@ -94,6 +95,7 @@ describe('background service worker', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSettingsCacheForTest();
     for (const key of Object.keys(mockStorage)) {
       delete mockStorage[key];
     }
@@ -166,7 +168,15 @@ describe('background service worker', () => {
       );
 
       expect(result).toBe(true);
-      expect(sendResponse).toHaveBeenCalledWith({ success: true });
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: true,
+          data: expect.objectContaining({
+            requestId: expect.any(String),
+            sessionId: 'tab-123',
+          }),
+        }),
+      );
 
       // 非同期処理の完了を待つ
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -223,7 +233,10 @@ describe('background service worker', () => {
       // 非同期処理の完了を待つ
       await new Promise((resolve) => setTimeout(resolve, 10));
 
-      expect(sendResponse).toHaveBeenCalledWith(existingState);
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        data: existingState,
+      });
     });
 
     it('無効なtabIdでエラーを返す', () => {
@@ -375,8 +388,9 @@ describe('background service worker', () => {
 
       const savedState = mockStorage.chat_125;
       expect(savedState).toBeDefined();
-      expect(savedState.messages).toHaveLength(1);
-      expect(savedState.messages[0].content).toBe('最終回答');
+      expect(savedState.messages).toHaveLength(2);
+      expect(savedState.messages[0].role).toBe('user');
+      expect(savedState.messages[1].content).toBe('最終回答');
     });
 
     it('ストリーム終了時にflush()で不完全なタグが出力される', async () => {

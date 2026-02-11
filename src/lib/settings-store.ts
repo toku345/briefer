@@ -5,9 +5,27 @@ interface Settings {
   selectedModel: string;
 }
 
+const MODELS_CACHE_TTL_MS = 60_000;
+let modelsCache: { ids: string[]; expiresAt: number } | null = null;
+
 export async function getSettings(): Promise<Settings | null> {
   const result = await chrome.storage.local.get(SETTINGS_KEY);
   return (result[SETTINGS_KEY] as Settings | undefined) ?? null;
+}
+
+async function getAvailableModelIds(): Promise<string[]> {
+  if (modelsCache && modelsCache.expiresAt > Date.now()) {
+    return modelsCache.ids;
+  }
+
+  const models = await fetchModels();
+  const ids = models.map((model) => model.id);
+  modelsCache = { ids, expiresAt: Date.now() + MODELS_CACHE_TTL_MS };
+  return ids;
+}
+
+export function resetSettingsCacheForTest(): void {
+  modelsCache = null;
 }
 
 export async function getSelectedModel(): Promise<string> {
@@ -15,21 +33,21 @@ export async function getSelectedModel(): Promise<string> {
   const savedModel = settings?.selectedModel;
 
   try {
-    const models = await fetchModels();
-    if (models.length === 0) {
+    const modelIds = await getAvailableModelIds();
+    if (modelIds.length === 0) {
       throw new Error('No models available');
     }
 
-    if (savedModel && models.some((m) => m.id === savedModel)) {
+    if (savedModel && modelIds.includes(savedModel)) {
       return savedModel;
     }
 
     if (savedModel) {
       console.warn(
-        `[Briefer] Saved model "${savedModel}" not found. Falling back to "${models[0].id}".`,
+        `[Briefer] Saved model "${savedModel}" not found. Falling back to "${modelIds[0]}".`,
       );
     }
-    const defaultModel = models[0].id;
+    const defaultModel = modelIds[0];
     await saveSelectedModel(defaultModel);
     return defaultModel;
   } catch (err) {

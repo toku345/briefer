@@ -8,6 +8,23 @@ import { usePageContent } from './hooks/usePageContent';
 import { useSendMessage } from './hooks/useSendMessage';
 import { useStreamListener } from './hooks/useStreamListener';
 
+function classifyError(message: string): string {
+  if (message.includes('このページでは使用できません')) {
+    return 'このページは拡張機能がアクセスできません。通常のWebページでお試しください。';
+  }
+  if (
+    message.includes('Failed to fetch') ||
+    message.includes('Network') ||
+    message.includes('API error')
+  ) {
+    return 'LLMサーバーへ接続できませんでした。サーバー起動状態とURLを確認してください。';
+  }
+  if (message.includes('model') || message.includes('Model') || message.includes('No models')) {
+    return 'モデル設定に問題があります。モデル一覧を再取得して選び直してください。';
+  }
+  return message;
+}
+
 export function App() {
   const { tabId, error: tabError } = useCurrentTab();
   const { data: pageContent, error: contentError } = usePageContent(tabId);
@@ -17,6 +34,7 @@ export function App() {
     streamingContent,
     isStreaming,
     setIsStreaming,
+    setActiveStream,
     error: streamError,
     clearError,
   } = useStreamListener(tabId, stopKeepalive);
@@ -24,12 +42,14 @@ export function App() {
     tabId,
     pageContent ?? null,
     setIsStreaming,
+    setActiveStream,
     startKeepalive,
     stopKeepalive,
   );
 
   const messages = chatState?.messages ?? [];
-  const error = tabError ?? contentError?.message ?? streamError;
+  const rawError = tabError ?? contentError?.message ?? streamError;
+  const error = rawError ? classifyError(rawError) : null;
   const isReady = !!tabId && !!pageContent;
   const isSending = isStreaming || isPending;
 
@@ -39,14 +59,22 @@ export function App() {
     sendMessage(content);
   };
 
+  const quickActions = [
+    'このページを要約して',
+    '重要なポイントを3つ教えて',
+    '次に読むべき観点を提案して',
+  ];
+
   return (
     <div className="container">
-      <Header />
+      <Header pageContent={pageContent ?? null} />
       <ChatContainer
         messages={messages}
         streamingContent={streamingContent}
         isStreaming={isStreaming}
         error={error}
+        quickActions={quickActions}
+        onQuickAction={handleSend}
       />
       <InputContainer
         onSend={handleSend}

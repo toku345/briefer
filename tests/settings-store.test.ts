@@ -21,11 +21,12 @@ const mockChrome = {
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-const { getSelectedModel } = await import('../src/lib/settings-store');
+const { getSelectedModel, resetSettingsCacheForTest } = await import('../src/lib/settings-store');
 
 describe('settings-store', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetSettingsCacheForTest();
     for (const key of Object.keys(mockLocalStorage)) {
       delete mockLocalStorage[key];
     }

@@ -14,7 +14,7 @@ export function useModels() {
           throw new Error(response.error ?? 'Failed to fetch models');
         }
 
-        return response.models ?? [];
+        return response.data;
       } catch (error) {
         // Service Worker接続エラーも含め、全てのエラーをログ出力して再スロー
         console.error('[Briefer] Failed to fetch models:', error);

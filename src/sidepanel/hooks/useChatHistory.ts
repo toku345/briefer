@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { ChatState } from '@/lib/types';
+import type { ChatState, GetChatStateResponse } from '@/lib/types';
 
 const DEFAULT_STATE: ChatState = {
   messages: [],
@@ -13,12 +13,16 @@ export function useChatHistory(tabId: number | null) {
       if (!tabId) return DEFAULT_STATE;
 
       try {
-        const state = (await chrome.runtime.sendMessage({
+        const response = (await chrome.runtime.sendMessage({
           type: 'GET_CHAT_STATE',
           tabId,
-        })) as ChatState | null;
+        })) as GetChatStateResponse;
 
-        return state ?? DEFAULT_STATE;
+        if (!response.success) {
+          throw new Error(response.error ?? 'Failed to get chat state');
+        }
+
+        return response.data ?? DEFAULT_STATE;
       } catch (error) {
         // Service Worker未起動の場合は空の状態を返す（初回アクセス時）
         if (
