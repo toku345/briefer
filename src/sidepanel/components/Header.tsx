@@ -1,10 +1,15 @@
 import { useEffect } from 'react';
+import type { ExtractedContent } from '@/lib/types';
 import { useModels } from '../hooks/useModels';
 import { useSelectedModel } from '../hooks/useSelectedModel';
 
-export function Header() {
+interface HeaderProps {
+  pageContent: ExtractedContent | null;
+}
+
+export function Header({ pageContent }: HeaderProps) {
   const { data: models, isLoading } = useModels();
-  const { model, selectModel } = useSelectedModel();
+  const { model, selectModel, isLoading: isModelLoading, error: modelError } = useSelectedModel();
 
   // 設定が未保存でモデルリストがある場合、最初のモデルを自動選択
   useEffect(() => {
@@ -19,21 +24,32 @@ export function Header() {
 
   return (
     <header className="header">
-      <h1>Briefer</h1>
-      {models && models.length > 0 && (
-        <select
-          className="model-select"
-          value={model ?? ''}
-          onChange={handleChange}
-          disabled={isLoading || !model}
-        >
-          {models.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.id.split('/').pop()}
-            </option>
-          ))}
-        </select>
-      )}
+      <div className="header-brand">
+        <h1>Briefer</h1>
+        {pageContent && (
+          <p className="page-meta" title={pageContent.url}>
+            {pageContent.title || pageContent.url}
+          </p>
+        )}
+      </div>
+      <div className="header-controls">
+        {models && models.length > 0 && (
+          <select
+            className="model-select"
+            value={model ?? ''}
+            onChange={handleChange}
+            disabled={isLoading || isModelLoading || !model}
+            aria-label="使用モデル"
+          >
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.id.split('/').pop()}
+              </option>
+            ))}
+          </select>
+        )}
+        {modelError && <span className="header-error">{modelError}</span>}
+      </div>
     </header>
   );
 }
