@@ -4,19 +4,19 @@
 
 ## プロジェクト概要
 
-Briefer はローカル LLM（vLLM）を使って、Web ページの要約とチャットを行う Chrome 拡張機能（Manifest V3）。
+Briefer はローカル LLM（vLLM）を使って Web ページを要約・チャットできる Chrome 拡張機能（Manifest V3）。
 
 ## コマンド
 
 ```bash
 bun install              # 依存関係のインストール
-bun run build            # ビルド（typecheck + Vite）
-bun run dev              # 開発モード（watch）
+bun run build            # ビルド（型チェック + Vite）
+bun run dev              # 開発モード（ファイル監視）
 bun run test             # テスト実行（Vitest）
 bun run test <file>      # 単一ファイルのテスト
 bun run typecheck        # 型チェックのみ
 bun run lint             # Lintチェック
-bun run check            # Lint + Formatチェック
+bun run check            # Lint + フォーマットチェック
 bun run check:fix        # Lint + フォーマット自動修正
 ```
 
@@ -26,7 +26,7 @@ bun run check:fix        # Lint + フォーマット自動修正
 
 ```bash
 bun run typecheck    # 型チェック
-bun run check        # Lint + Format
+bun run check        # Lint + フォーマット
 bun run test         # テスト
 ```
 
@@ -63,7 +63,7 @@ bun run test         # テスト
 - **Side Panel → Service Worker**: `chrome.runtime.sendMessage({ type: 'CHAT', tabId, payload })`
 - **Service Worker → Side Panel**: `chrome.runtime.sendMessage({ type: 'STREAM_CHUNK', tabId, payload })`
 
-注意: Side Panel 発メッセージでは `sender.tab` が `undefined` になる。必ずメッセージ payload に `tabId` を含めること。
+注意: Side Panel からのメッセージでは `sender.tab` が `undefined` になる。必ずメッセージの payload に `tabId` を含めること。
 
 ### 主要ファイル
 
@@ -85,4 +85,4 @@ bun run test         # テスト
 const VLLM_BASE_URL = 'http://localhost:8000/v1';
 ```
 
-モデルは vLLM サーバーから動的取得し、UI 上で選択可能。
+モデルは vLLM サーバーから動的に取得し、UI 上で選択可能。
