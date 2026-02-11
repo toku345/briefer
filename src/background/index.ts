@@ -1,6 +1,6 @@
 import { addMessage, getChatState, setPageContent } from '../lib/chat-store';
 import { fetchModels, streamChat } from '../lib/llm-client';
-import { getSelectedModel } from '../lib/settings-store';
+import { getSelectedModel, getVllmBaseUrl } from '../lib/settings-store';
 import { ThinkTagFilter } from '../lib/think-tag-filter';
 import {
   type ChatMessage,
@@ -15,6 +15,9 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
   return sender.id === chrome.runtime.id;
 }
 
+// tabId 別に進行中リクエストの AbortController を管理
+const activeRequests = new Map<number, AbortController>();
+
 // Keepalive ポート: Side Panel からの定期 ping で Service Worker のアイドルタイムアウトを防止
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== KEEPALIVE_PORT_NAME) return;
@@ -28,6 +31,40 @@ chrome.runtime.onConnect.addListener((port) => {
       }
     }
   });
+});
+
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.contextMenus.create({
+    id: 'briefer-ask',
+    title: 'Briefer で質問',
+    contexts: ['selection'],
+  });
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === 'briefer-ask' && info.selectionText && tab?.id) {
+    const tabId = tab.id;
+
+    chrome.sidePanel
+      .setOptions({
+        tabId,
+        path: 'sidepanel/index.html',
+        enabled: true,
+      })
+      .then(() => chrome.sidePanel.open({ tabId }))
+      .then(() => {
+        // Side Panel の初期化完了を待ってから選択テキストを送信
+        setTimeout(() => {
+          chrome.runtime.sendMessage({
+            type: 'SELECTED_TEXT',
+            text: info.selectionText,
+          });
+        }, 500);
+      })
+      .catch((err) => {
+        console.error('[Briefer] Failed to open side panel for context menu:', err);
+      });
+  }
 });
 
 // デフォルトで Side Panel を無効化（明示的に開いたタブでのみ有効にする）
@@ -90,8 +127,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
+  if (message.type === 'CANCEL_CHAT') {
+    const tabId = message.tabId;
+    if (typeof tabId !== 'number' || tabId < 0) {
+      sendResponse({ success: false, error: 'Invalid tabId' });
+      return true;
+    }
+    const controller = activeRequests.get(tabId);
+    if (controller) {
+      controller.abort();
+      activeRequests.delete(tabId);
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+
   if (message.type === 'GET_MODELS') {
-    fetchModels()
+    getVllmBaseUrl()
+      .then((baseUrl) => fetchModels(baseUrl))
       .then((models) => sendResponse({ success: true, models }))
       .catch((error) =>
         sendResponse({
@@ -106,14 +159,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 async function handleChat(request: SummarizeRequest, tabId: number): Promise<void> {
+  // 同一タブの既存リクエストをキャンセル
+  activeRequests.get(tabId)?.abort();
+
+  const controller = new AbortController();
+  activeRequests.set(tabId, controller);
+
   await setPageContent(tabId, request.pageContent);
   const model = await getSelectedModel();
+  const baseUrl = await getVllmBaseUrl();
 
   let fullResponse = '';
   const filter = new ThinkTagFilter();
 
   try {
-    for await (const chunk of streamChat(request.messages, request.pageContent, model)) {
+    for await (const chunk of streamChat(
+      request.messages,
+      request.pageContent,
+      model,
+      baseUrl,
+      controller.signal,
+    )) {
       if (chunk.type === 'chunk' && chunk.content) {
         const filtered = filter.process(chunk.content);
         fullResponse += filtered;
@@ -140,11 +206,17 @@ async function handleChat(request: SummarizeRequest, tabId: number): Promise<voi
       await addMessage(tabId, assistantMessage);
     }
   } catch (error) {
+    // abort によるキャンセルはエラーとして扱わない
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return;
+    }
     const errorChunk: StreamChunk = {
       type: 'error',
       error: error instanceof Error ? error.message : 'Unknown error',
     };
     await sendToSidePanel(tabId, errorChunk);
+  } finally {
+    activeRequests.delete(tabId);
   }
 }
 

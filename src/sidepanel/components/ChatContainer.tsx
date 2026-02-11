@@ -8,14 +8,16 @@ interface ChatContainerProps {
   messages: ChatMessage[];
   streamingContent: string;
   isStreaming: boolean;
-  error: string | null;
+  onSend: (content: string) => void;
+  sendDisabled?: boolean;
 }
 
 export function ChatContainer({
   messages,
   streamingContent,
   isStreaming,
-  error,
+  onSend,
+  sendDisabled,
 }: ChatContainerProps) {
   const containerRef = useRef<HTMLElement>(null);
 
@@ -27,14 +29,13 @@ export function ChatContainer({
     }
   }, [messages, streamingContent]);
 
-  const showWelcome = messages.length === 0 && !isStreaming && !error;
+  const showWelcome = messages.length === 0 && !isStreaming;
 
   return (
     <main className="chat-container" ref={containerRef}>
-      {showWelcome && <WelcomeMessage />}
+      {showWelcome && <WelcomeMessage onSend={onSend} disabled={sendDisabled} />}
       <MessageList messages={messages} />
       {isStreaming && <StreamingMessage content={streamingContent} />}
-      {error && <div className="message error">{error}</div>}
     </main>
   );
 }

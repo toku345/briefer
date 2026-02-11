@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { GetModelsResponse, ModelInfo } from '@/lib/types';
 
 export function useModels() {
-  return useQuery<ModelInfo[]>({
+  const query = useQuery<ModelInfo[]>({
     queryKey: ['models'],
     queryFn: async () => {
       try {
@@ -23,4 +23,11 @@ export function useModels() {
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  return {
+    data: query.data,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+  };
 }

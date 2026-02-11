@@ -1,14 +1,35 @@
-import { type KeyboardEvent, useCallback, useRef, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 interface InputContainerProps {
   onSend: (content: string) => void;
-  disabled: boolean;
-  defaultValue?: string;
+  disabledReason?: 'loading' | 'sending' | 'server-error';
+  prefillText?: string;
+  isStreaming?: boolean;
+  onCancel?: () => void;
 }
 
-export function InputContainer({ onSend, disabled, defaultValue = '' }: InputContainerProps) {
-  const [value, setValue] = useState(defaultValue);
+const placeholderMap: Record<string, string> = {
+  loading: 'ページを読み込み中...',
+  sending: '応答を生成中...',
+  'server-error': 'vLLM に接続できません',
+};
+
+export function InputContainer({
+  onSend,
+  disabledReason,
+  prefillText,
+  isStreaming,
+  onCancel,
+}: InputContainerProps) {
+  const disabled = !!disabledReason;
+  const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (prefillText) {
+      setValue(prefillText);
+    }
+  }, [prefillText]);
 
   const handleSend = useCallback(() => {
     const content = value.trim();
@@ -49,12 +70,18 @@ export function InputContainer({ onSend, disabled, defaultValue = '' }: InputCon
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onInput={handleInput}
-        placeholder="メッセージを入力..."
+        placeholder={disabledReason ? placeholderMap[disabledReason] : 'メッセージを入力...'}
         rows={1}
       />
-      <button id="send-btn" type="button" onClick={handleSend} disabled={disabled}>
-        送信
-      </button>
+      {isStreaming ? (
+        <button id="send-btn" type="button" className="cancel" onClick={onCancel}>
+          停止
+        </button>
+      ) : (
+        <button id="send-btn" type="button" onClick={handleSend} disabled={disabled}>
+          送信
+        </button>
+      )}
     </footer>
   );
 }

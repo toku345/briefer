@@ -10,6 +10,11 @@ let messageListener: (
 
 let actionClickedListener: (tab: chrome.tabs.Tab) => void;
 let connectListener: (port: chrome.runtime.Port) => void;
+let installedListener: () => void;
+let contextMenuClickedListener: (
+  info: chrome.contextMenus.OnClickData,
+  tab?: chrome.tabs.Tab,
+) => void;
 
 // モックストレージ
 const mockStorage: Record<string, ChatState> = {};
@@ -29,7 +34,20 @@ const mockChrome = {
         connectListener = listener;
       }),
     },
+    onInstalled: {
+      addListener: vi.fn((listener) => {
+        installedListener = listener;
+      }),
+    },
     sendMessage: vi.fn(),
+  },
+  contextMenus: {
+    create: vi.fn(),
+    onClicked: {
+      addListener: vi.fn((listener) => {
+        contextMenuClickedListener = listener;
+      }),
+    },
   },
   action: {
     onClicked: {
@@ -258,6 +276,109 @@ describe('background service worker', () => {
 
       expect(mockChrome.sidePanel.setOptions).not.toHaveBeenCalled();
       expect(mockChrome.sidePanel.open).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('コンテキストメニュー', () => {
+    it('onInstalled でメニューを登録する', () => {
+      installedListener();
+
+      expect(mockChrome.contextMenus.create).toHaveBeenCalledWith({
+        id: 'briefer-ask',
+        title: 'Briefer で質問',
+        contexts: ['selection'],
+      });
+    });
+
+    it('選択テキスト付きクリックでサイドパネルを開く', async () => {
+      const info = {
+        menuItemId: 'briefer-ask',
+        selectionText: 'テスト選択',
+      } as chrome.contextMenus.OnClickData;
+      const tab = { id: 789 } as chrome.tabs.Tab;
+
+      contextMenuClickedListener(info, tab);
+
+      expect(mockChrome.sidePanel.setOptions).toHaveBeenCalledWith({
+        tabId: 789,
+        path: 'sidepanel/index.html',
+        enabled: true,
+      });
+    });
+
+    it('selectionText がない場合は何もしない', () => {
+      const info = {
+        menuItemId: 'briefer-ask',
+      } as chrome.contextMenus.OnClickData;
+      const tab = { id: 789 } as chrome.tabs.Tab;
+
+      contextMenuClickedListener(info, tab);
+
+      expect(mockChrome.sidePanel.setOptions).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('CANCEL_CHAT メッセージ', () => {
+    it('ストリーミング中のリクエストをキャンセルする', async () => {
+      mockLocalStorage.briefer_settings = { selectedModel: 'test-model' };
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ object: 'list', data: [{ id: 'test-model' }] }),
+      });
+
+      // 長時間ストリームをシミュレート
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"part1"}}]}\n'),
+          );
+          // ストリームを閉じずに保持
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({ ok: true, body: mockStream });
+
+      const sendResponse = vi.fn();
+      const request: SummarizeRequest = {
+        messages: [{ role: 'user', content: 'Hello' }],
+        pageContent: mockPageContent,
+      };
+
+      messageListener({ type: 'CHAT', tabId: 200, payload: request }, validSender, sendResponse);
+
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      const cancelResponse = vi.fn();
+      const result = messageListener(
+        { type: 'CANCEL_CHAT', tabId: 200 },
+        validSender,
+        cancelResponse,
+      );
+
+      expect(result).toBe(true);
+      expect(cancelResponse).toHaveBeenCalledWith({ success: true });
+    });
+
+    it('無効なtabIdでエラーを返す', () => {
+      const sendResponse = vi.fn();
+      messageListener({ type: 'CANCEL_CHAT', tabId: -1 }, validSender, sendResponse);
+
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: false,
+        error: 'Invalid tabId',
+      });
+    });
+
+    it('アクティブなリクエストがない場合も成功を返す', () => {
+      const sendResponse = vi.fn();
+      const result = messageListener(
+        { type: 'CANCEL_CHAT', tabId: 999 },
+        validSender,
+        sendResponse,
+      );
+
+      expect(result).toBe(true);
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
   });
 

@@ -3,7 +3,16 @@
   "name": "Briefer",
   "version": "1.0.0",
   "description": "ローカルLLMでページを素早く要約・チャット",
-  "permissions": ["activeTab", "scripting", "sidePanel", "storage"],
+  "permissions": ["activeTab", "scripting", "sidePanel", "storage", "contextMenus"],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+B",
+        "mac": "Command+Shift+B"
+      },
+      "description": "Briefer を開く"
+    }
+  },
   "host_permissions": ["http://localhost:8000/*"],
   "action": {
     "default_title": "Open Briefer",

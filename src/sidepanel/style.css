@@ -210,6 +210,14 @@ body {
   cursor: not-allowed;
 }
 
+#send-btn.cancel {
+  background: #cc3333;
+}
+
+#send-btn.cancel:hover {
+  background: #aa2222;
+}
+
 /* Markdown styles for assistant messages */
 .message.assistant h2 {
   font-size: 14px;
@@ -274,4 +282,252 @@ body {
   text-align: center;
   color: #ffaaaa;
   background: #661111;
+}
+
+/* PageContextBar */
+.page-context-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #333;
+  font-size: 12px;
+  color: #999;
+  min-height: 28px;
+}
+
+.page-context-bar .favicon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.page-context-bar .page-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  color: #ccc;
+}
+
+.page-context-bar .page-url {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  font-size: 11px;
+  flex-shrink: 0;
+  padding: 0;
+  font-family: inherit;
+}
+
+.page-context-bar .page-url:hover {
+  color: #999;
+}
+
+.page-context-bar .loading-text {
+  color: #666;
+  font-style: italic;
+}
+
+/* ErrorMessage */
+.error-message {
+  margin: 8px 12px;
+  padding: 10px 12px;
+  background: #2d1515;
+  border: 1px solid #552222;
+  border-radius: 8px;
+  color: #ffaaaa;
+  font-size: 13px;
+  position: relative;
+}
+
+.error-message .error-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.error-message .error-subtitle {
+  font-size: 12px;
+  color: #cc8888;
+}
+
+.error-message .error-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.error-message .error-retry-btn {
+  background: #553333;
+  color: #ffaaaa;
+  border: 1px solid #664444;
+  border-radius: 4px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.error-message .error-retry-btn:hover {
+  background: #664444;
+}
+
+.error-message .error-dismiss-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #cc8888;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px;
+}
+
+.error-message .error-dismiss-btn:hover {
+  color: #ffaaaa;
+}
+
+/* Header layout */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-clear-btn {
+  background: none;
+  border: 1px solid #444;
+  color: #e0e0e0;
+  font-size: 16px;
+  line-height: 1;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-clear-btn:hover {
+  background: #333;
+  border-color: #555;
+}
+
+/* Status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Settings */
+.settings-wrapper {
+  position: relative;
+}
+
+.header-settings-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+}
+
+.header-settings-btn:hover {
+  color: #e0e0e0;
+}
+
+.settings-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px;
+  z-index: 10;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-label {
+  font-size: 12px;
+  color: #999;
+}
+
+.settings-input {
+  padding: 6px 8px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 12px;
+  width: 100%;
+}
+
+.settings-input:focus {
+  outline: none;
+  border-color: #0066cc;
+}
+
+.settings-save-btn {
+  padding: 6px 12px;
+  background: #0066cc;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  align-self: flex-end;
+}
+
+.settings-save-btn:hover {
+  background: #0055aa;
+}
+
+/* Quick Actions */
+.welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 0 12px;
+}
+
+.welcome-actions button {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.welcome-actions button:hover:not(:disabled) {
+  background: #333;
+  border-color: #555;
+}
+
+.welcome-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
