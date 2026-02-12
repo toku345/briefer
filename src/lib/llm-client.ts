@@ -1,14 +1,10 @@
+import { getSettings } from './settings-store';
 import type { ChatMessage, ExtractedContent, ModelInfo, StreamChunk } from './types';
 
-// ローカル環境のvLLMサーバーを使用（本番環境では環境変数から取得する想定）
-const VLLM_BASE_URL = 'http://localhost:8000/v1';
-
-// XMLの特殊文字をエスケープ
 function escapeXml(text: string): string {
   return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// ページタイトルのサニタイズ（制御文字除去、改行除去、長さ制限）
 function sanitizeTitle(title: string): string {
   return (
     title
@@ -20,7 +16,6 @@ function sanitizeTitle(title: string): string {
   );
 }
 
-// ページコンテンツのサニタイズ（制御文字除去、連続ダッシュ短縮、長さ制限）
 function sanitizeContent(content: string): string {
   return (
     content
@@ -52,14 +47,16 @@ interface ChatCompletionRequest {
   stream?: boolean;
 }
 
-export async function fetchModels(): Promise<ModelInfo[]> {
-  const response = await fetch(`${VLLM_BASE_URL}/models`);
+export async function fetchModels(serverUrl?: string, signal?: AbortSignal): Promise<ModelInfo[]> {
+  const rawUrl = serverUrl ?? (await getSettings()).serverUrl;
+  const baseUrl = rawUrl.replace(/\/+$/, '');
+
+  const response = await fetch(`${baseUrl}/models`, { signal });
   if (!response.ok) {
     throw new Error(`Failed to fetch models: ${response.status}`);
   }
   const data = await response.json();
 
-  // ランタイム検証: vLLM API応答形式を確認
   if (data?.object !== 'list' || !Array.isArray(data?.data)) {
     throw new Error('Invalid models response format');
   }
@@ -114,26 +111,27 @@ export async function* streamChat(
   messages: ChatMessage[],
   pageContent: ExtractedContent,
   model: string,
+  signal?: AbortSignal,
 ): AsyncGenerator<StreamChunk> {
+  const settings = await getSettings();
+  const serverUrl = settings.serverUrl.replace(/\/+$/, '');
   const systemMessage = buildSystemMessage(pageContent);
 
-  // APIリクエスト用にmodelIdを除外（vLLM APIは追加フィールドを受け付けない）
   const apiMessages = messages.map(({ role, content }) => ({ role, content }));
 
   const request: ChatCompletionRequest = {
     model,
     messages: [{ role: 'system', content: systemMessage }, ...apiMessages],
-    max_tokens: 2048,
-    temperature: 0.3,
+    max_tokens: settings.maxTokens,
+    temperature: settings.temperature,
     stream: true,
   };
 
-  const response = await fetch(`${VLLM_BASE_URL}/chat/completions`, {
+  const response = await fetch(`${serverUrl}/chat/completions`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),
+    signal,
   });
 
   if (!response.ok) {
@@ -169,7 +167,6 @@ export async function* streamChat(
 
         try {
           const json = JSON.parse(trimmed.slice(6));
-          // レスポンス形式の検証
           if (!json || typeof json !== 'object' || !Array.isArray(json.choices)) {
             continue;
           }
@@ -185,6 +182,7 @@ export async function* streamChat(
 
     yield { type: 'done', modelId: model };
   } catch (error) {
+    if (signal?.aborted) return;
     yield {
       type: 'error',
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -198,9 +196,10 @@ export async function chat(
   messages: ChatMessage[],
   pageContent: ExtractedContent,
   model: string,
+  signal?: AbortSignal,
 ): Promise<string> {
   let result = '';
-  for await (const chunk of streamChat(messages, pageContent, model)) {
+  for await (const chunk of streamChat(messages, pageContent, model, signal)) {
     if (chunk.type === 'chunk' && chunk.content) {
       result += chunk.content;
     } else if (chunk.type === 'error') {

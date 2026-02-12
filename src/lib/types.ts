@@ -27,38 +27,23 @@ export interface ChatState {
   pageContent: ExtractedContent | null;
 }
 
-export type ContentResponse =
-  | { success: true; data: ExtractedContent }
-  | { success: false; error: string };
-
-export interface SummarizeRequest {
-  messages: ChatMessage[];
-  pageContent: ExtractedContent;
-}
-
 export type StreamChunk =
   | { type: 'chunk'; content: string }
   | { type: 'done'; modelId: string }
   | { type: 'error'; error: string };
 
-export type MessageType =
-  | { type: 'GET_CONTENT' }
-  | { type: 'CHAT'; tabId: number; payload: SummarizeRequest }
-  | { type: 'STREAM_CHUNK'; tabId: number; payload: StreamChunk }
-  | { type: 'GET_CHAT_STATE'; tabId: number }
-  | { type: 'GET_MODELS' };
-
-// Chrome runtime message response types
-export interface GetModelsResponse {
-  success: boolean;
-  models?: ModelInfo[];
-  error?: string;
-}
-
-// Settings storage key (shared constant)
 export const SETTINGS_KEY = 'briefer_settings';
 
-// Port-based keepalive (MV3 Service Worker のアイドルタイムアウト対策)
-export type PortMessage = { type: 'KEEPALIVE_PING' } | { type: 'KEEPALIVE_PONG' };
+export interface Settings {
+  serverUrl: string;
+  selectedModel: string | null;
+  temperature: number;
+  maxTokens: number;
+}
 
-export const KEEPALIVE_PORT_NAME = 'briefer-keepalive';
+export const DEFAULT_SETTINGS: Settings = {
+  serverUrl: 'http://localhost:8000/v1',
+  selectedModel: null,
+  temperature: 0.3,
+  maxTokens: 2048,
+};

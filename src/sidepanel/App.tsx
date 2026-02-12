@@ -2,39 +2,29 @@ import { ChatContainer } from './components/ChatContainer';
 import { Header } from './components/Header';
 import { InputContainer } from './components/InputContainer';
 import { useChatHistory } from './hooks/useChatHistory';
+import { useChatStream } from './hooks/useChatStream';
 import { useCurrentTab } from './hooks/useCurrentTab';
-import { useKeepalive } from './hooks/useKeepalive';
 import { usePageContent } from './hooks/usePageContent';
-import { useSendMessage } from './hooks/useSendMessage';
-import { useStreamListener } from './hooks/useStreamListener';
 
 export function App() {
   const { tabId, error: tabError } = useCurrentTab();
   const { data: pageContent, error: contentError } = usePageContent(tabId);
   const { data: chatState } = useChatHistory(tabId);
-  const { startKeepalive, stopKeepalive } = useKeepalive();
   const {
+    sendMessage,
+    cancel,
     streamingContent,
     isStreaming,
-    setIsStreaming,
     error: streamError,
     clearError,
-  } = useStreamListener(tabId, stopKeepalive);
-  const { mutate: sendMessage, isPending } = useSendMessage(
-    tabId,
-    pageContent ?? null,
-    setIsStreaming,
-    startKeepalive,
-    stopKeepalive,
-  );
+  } = useChatStream(tabId, pageContent ?? null);
 
   const messages = chatState?.messages ?? [];
   const error = tabError ?? contentError?.message ?? streamError;
   const isReady = !!tabId && !!pageContent;
-  const isSending = isStreaming || isPending;
 
   const handleSend = (content: string) => {
-    if (!isReady || isSending) return;
+    if (!isReady || isStreaming) return;
     clearError();
     sendMessage(content);
   };
@@ -50,7 +40,9 @@ export function App() {
       />
       <InputContainer
         onSend={handleSend}
-        disabled={!isReady || isSending}
+        onCancel={cancel}
+        isStreaming={isStreaming}
+        disabled={!isReady || isStreaming}
         defaultValue={messages.length === 0 ? 'このページを要約して' : ''}
       />
     </div>

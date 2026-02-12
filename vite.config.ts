@@ -84,7 +84,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         sidepanel: resolve(__dirname, 'src/sidepanel/index.html'),
-        content: resolve(__dirname, 'src/content/index.ts'),
         background: resolve(__dirname, 'src/background/index.ts'),
       },
       output: {
