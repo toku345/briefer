@@ -48,15 +48,10 @@ export function PageContextBar({ title, url, isLoading }: PageContextBarProps) {
 
   return (
     <div className="page-context-bar">
-      {hostname && (
-        <img
-          className="favicon"
-          src={`https://www.google.com/s2/favicons?domain=${hostname}&sz=16`}
-          alt=""
-          width={16}
-          height={16}
-        />
-      )}
+      {/* Google Favicons API はドメイン情報を外部送信するため、プライバシー保護のためローカルアイコンを使用 */}
+      <span className="favicon" aria-hidden="true">
+        🌐
+      </span>
       <span className="page-title">{title}</span>
       {url && (
         <button

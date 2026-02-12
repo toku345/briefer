@@ -298,8 +298,8 @@ body {
 }
 
 .page-context-bar .favicon {
-  width: 16px;
-  height: 16px;
+  font-size: 14px;
+  line-height: 1;
   flex-shrink: 0;
 }
 
