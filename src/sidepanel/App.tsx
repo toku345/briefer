@@ -64,6 +64,7 @@ export function App() {
     if (!isReady || isSending) return;
     clearError();
     sendMessage(content);
+    setSelectedText(undefined);
   };
 
   const handleCancel = () => {
@@ -94,13 +95,7 @@ export function App() {
         url={pageContent?.url}
         isLoading={!!tabId && !pageContent && !contentError}
       />
-      {error && (
-        <ErrorMessage
-          error={error}
-          onRetry={streamError ? () => clearError() : undefined}
-          onDismiss={clearError}
-        />
-      )}
+      {error && <ErrorMessage error={error} onRetry={undefined} onDismiss={clearError} />}
       <ChatContainer
         messages={messages}
         streamingContent={streamingContent}
