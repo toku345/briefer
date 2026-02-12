@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { SETTINGS_KEY } from '../src/lib/types';
+import { SETTINGS_KEY } from '../lib/types';
 
 const mockLocalStorage: Record<string, unknown> = {};
 
@@ -19,7 +19,7 @@ const mockChrome = {
   mockChrome as unknown as typeof chrome;
 
 const { getSelectedModel, getServerUrl, getSettings, saveSelectedModel, saveSettings } =
-  await import('../src/lib/settings-store');
+  await import('../lib/settings-store');
 
 describe('settings-store', () => {
   beforeEach(() => {

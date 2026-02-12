@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { ThinkTagFilter } from '../src/lib/think-tag-filter';
+import { ThinkTagFilter } from '../lib/think-tag-filter';
 
 describe('ThinkTagFilter', () => {
   let filter: ThinkTagFilter;

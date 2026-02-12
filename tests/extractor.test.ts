@@ -1,6 +1,6 @@
 import { JSDOM } from 'jsdom';
 import { describe, expect, it } from 'vitest';
-import { extractMainContent } from '../src/lib/extractor';
+import { extractMainContent } from '../lib/extractor';
 
 describe('extractMainContent', () => {
   it('article要素からコンテンツを抽出する', () => {
