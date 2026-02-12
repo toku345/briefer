@@ -1,14 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ChatState, GetStreamStateResponse, StreamChunk } from '@/lib/types';
-
-interface ActiveStream {
-  requestId: string;
-  sessionId: string;
-}
+import type { ActiveStream, ChatState, GetStreamStateResponse, StreamChunk } from '@/lib/types';
 
 function isDuplicateSeq(seq: number | undefined, lastSeq: number): boolean {
-  if (!seq) return false;
+  if (seq == null) return false;
   return seq <= lastSeq;
 }
 
@@ -77,6 +72,7 @@ export function useStreamListener(tabId: number | null, onStreamEnd?: () => void
       })
       .catch((resumeError) => {
         console.error('[Briefer] Failed to restore stream state:', resumeError);
+        setIsStreaming(false);
       });
   }, [tabId]);
 
@@ -106,7 +102,7 @@ export function useStreamListener(tabId: number | null, onStreamEnd?: () => void
         return;
       }
 
-      if (chunk.seq) {
+      if (chunk.seq != null) {
         lastSeqRef.current = chunk.seq;
       }
 
@@ -141,16 +137,6 @@ export function useStreamListener(tabId: number | null, onStreamEnd?: () => void
           });
         }
 
-        if (tabId && chunk.seq && chunk.requestId && chunk.sessionId) {
-          chrome.runtime.sendMessage({
-            type: 'STREAM_ACK',
-            tabId,
-            requestId: chunk.requestId,
-            sessionId: chunk.sessionId,
-            lastSeq: chunk.seq,
-          });
-        }
-
         setStreamingContent('');
         setIsStreaming(false);
         setActiveStreamState(null);
@@ -160,16 +146,6 @@ export function useStreamListener(tabId: number | null, onStreamEnd?: () => void
       } else if (chunk.type === 'error') {
         setError(chunk.error || 'エラーが発生しました');
 
-        if (tabId && chunk.seq && chunk.requestId && chunk.sessionId) {
-          chrome.runtime.sendMessage({
-            type: 'STREAM_ACK',
-            tabId,
-            requestId: chunk.requestId,
-            sessionId: chunk.sessionId,
-            lastSeq: chunk.seq,
-          });
-        }
-
         setStreamingContent('');
         setIsStreaming(false);
         setActiveStreamState(null);
@@ -178,7 +154,7 @@ export function useStreamListener(tabId: number | null, onStreamEnd?: () => void
         onStreamEndRef.current?.();
       }
 
-      if (tabId && chunk.seq && chunk.requestId && chunk.sessionId) {
+      if (tabId != null && chunk.seq != null && chunk.requestId && chunk.sessionId) {
         chrome.runtime.sendMessage({
           type: 'STREAM_ACK',
           tabId,

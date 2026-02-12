@@ -40,28 +40,25 @@ export interface SummarizeRequest {
   pageContent: ExtractedContent;
 }
 
+interface StreamMeta {
+  requestId?: string;
+  sessionId?: string;
+  seq?: number;
+}
+
 export type StreamChunk =
-  | {
+  | (StreamMeta & {
       type: 'chunk';
       content: string;
-      requestId?: string;
-      sessionId?: string;
-      seq?: number;
-    }
-  | {
+    })
+  | (StreamMeta & {
       type: 'done';
       modelId: string;
-      requestId?: string;
-      sessionId?: string;
-      seq?: number;
-    }
-  | {
+    })
+  | (StreamMeta & {
       type: 'error';
       error: string;
-      requestId?: string;
-      sessionId?: string;
-      seq?: number;
-    };
+    });
 
 export interface ChatRequestEnvelope {
   type: 'CHAT';
@@ -71,20 +68,19 @@ export interface ChatRequestEnvelope {
   payload: SummarizeRequest;
 }
 
-export interface StreamAckEnvelope {
-  type: 'STREAM_ACK';
+interface StreamProgressEnvelope {
   tabId: number;
   requestId: string;
   sessionId: string;
   lastSeq: number;
 }
 
-export interface ResumeStreamEnvelope {
+export interface StreamAckEnvelope extends StreamProgressEnvelope {
+  type: 'STREAM_ACK';
+}
+
+export interface ResumeStreamEnvelope extends StreamProgressEnvelope {
   type: 'RESUME_STREAM';
-  tabId: number;
-  requestId: string;
-  sessionId: string;
-  lastSeq: number;
 }
 
 export interface StreamState {
@@ -97,6 +93,11 @@ export interface StreamState {
   startedAt: number;
   lastAckSeq: number;
   error?: string;
+}
+
+export interface ActiveStream {
+  requestId: string;
+  sessionId: string;
 }
 
 export type ApiResponse<T> = { success: true; data: T } | { success: false; error: string };

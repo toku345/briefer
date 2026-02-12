@@ -30,8 +30,11 @@ type OutgoingStreamEvent =
   | { type: 'done'; modelId: string }
   | { type: 'error'; error: string };
 
+const MAX_REPLAY_EVENTS = 200;
+const STREAM_RETENTION_MS = 5 * 60 * 1000;
 const streamStates = new Map<string, InMemoryStreamState>();
 const latestStreamByTab = new Map<number, string>();
+const streamCleanupTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function now(): number {
   return Date.now();
@@ -53,6 +56,30 @@ function streamKey(tabId: number, sessionId: string, requestId: string): string 
   return `${tabId}:${sessionId}:${requestId}`;
 }
 
+function clearStreamCleanupTimer(key: string): void {
+  const timer = streamCleanupTimers.get(key);
+  if (!timer) return;
+  clearTimeout(timer);
+  streamCleanupTimers.delete(key);
+}
+
+function removeStreamStateByKey(tabId: number, key: string): void {
+  clearStreamCleanupTimer(key);
+  streamStates.delete(key);
+  if (latestStreamByTab.get(tabId) === key) {
+    latestStreamByTab.delete(tabId);
+  }
+}
+
+function scheduleStreamCleanup(tabId: number, sessionId: string, requestId: string): void {
+  const key = streamKey(tabId, sessionId, requestId);
+  clearStreamCleanupTimer(key);
+  const timer = setTimeout(() => {
+    removeStreamStateByKey(tabId, key);
+  }, STREAM_RETENTION_MS);
+  streamCleanupTimers.set(key, timer);
+}
+
 // 送信元が自拡張機能であることを検証（他の拡張機能からの不正なメッセージを拒否）
 function isValidSender(sender: chrome.runtime.MessageSender): boolean {
   return sender.id === chrome.runtime.id;
@@ -68,7 +95,10 @@ function isChatEnvelope(message: unknown): message is ChatRequestEnvelope {
     message !== null &&
     'type' in message &&
     message.type === 'CHAT' &&
-    'payload' in message
+    'tabId' in message &&
+    'payload' in message &&
+    typeof message.payload === 'object' &&
+    message.payload !== null
   );
 }
 
@@ -77,7 +107,15 @@ function isStreamAckEnvelope(message: unknown): message is StreamAckEnvelope {
     typeof message === 'object' &&
     message !== null &&
     'type' in message &&
-    message.type === 'STREAM_ACK'
+    message.type === 'STREAM_ACK' &&
+    'tabId' in message &&
+    'requestId' in message &&
+    'sessionId' in message &&
+    'lastSeq' in message &&
+    typeof message.tabId === 'number' &&
+    typeof message.requestId === 'string' &&
+    typeof message.sessionId === 'string' &&
+    typeof message.lastSeq === 'number'
   );
 }
 
@@ -86,7 +124,15 @@ function isResumeStreamEnvelope(message: unknown): message is ResumeStreamEnvelo
     typeof message === 'object' &&
     message !== null &&
     'type' in message &&
-    message.type === 'RESUME_STREAM'
+    message.type === 'RESUME_STREAM' &&
+    'tabId' in message &&
+    'requestId' in message &&
+    'sessionId' in message &&
+    'lastSeq' in message &&
+    typeof message.tabId === 'number' &&
+    typeof message.requestId === 'string' &&
+    typeof message.sessionId === 'string' &&
+    typeof message.lastSeq === 'number'
   );
 }
 
@@ -118,8 +164,14 @@ function registerStream(params: {
   };
 
   const key = streamKey(params.tabId, params.sessionId, params.requestId);
+  const previousKey = latestStreamByTab.get(params.tabId);
+  if (previousKey && previousKey !== key) {
+    removeStreamStateByKey(params.tabId, previousKey);
+  }
+  clearStreamCleanupTimer(key);
   streamStates.set(key, state);
   latestStreamByTab.set(params.tabId, key);
+  scheduleStreamCleanup(params.tabId, params.sessionId, params.requestId);
   return state;
 }
 
@@ -136,10 +188,13 @@ async function emitStreamEvent(state: InMemoryStreamState, event: OutgoingStream
   };
 
   state.events.push(payload);
-  // メモリ利用を抑えるため、直近200イベントのみ保持
-  if (state.events.length > 200) {
-    state.events = state.events.slice(-200);
+  // 未ACKイベントを優先して保持しつつメモリ利用を抑える
+  if (state.events.length > MAX_REPLAY_EVENTS) {
+    const unacked = state.events.filter((event) => (event.seq ?? 0) > state.lastAckSeq);
+    state.events = unacked.length > MAX_REPLAY_EVENTS ? unacked.slice(-MAX_REPLAY_EVENTS) : unacked;
   }
+
+  scheduleStreamCleanup(state.tabId, state.sessionId, state.requestId);
 
   await sendToSidePanel(state.tabId, payload);
 }
@@ -157,7 +212,7 @@ async function cacheLatestUserMessage(
 
   const state = await getChatState(tabId);
   const storedLast = state.messages[state.messages.length - 1];
-  if (storedLast?.role === 'user' && storedLast.content === latestMessage.content) {
+  if (storedLast?.role === 'user' && storedLast.requestId === requestId) {
     return;
   }
 
@@ -200,7 +255,12 @@ async function handleChat(
         streamState.status = 'error';
         streamState.error = chunk.error;
         await emitStreamEvent(streamState, { type: 'error', error: chunk.error });
+        break;
       }
+    }
+
+    if (streamState.status === 'error') {
+      return;
     }
 
     const remaining = filter.flush();
@@ -222,13 +282,11 @@ async function handleChat(
       await addMessage(tabId, assistantMessage);
     }
 
-    if (streamState.status !== 'error') {
-      streamState.status = 'done';
-      await emitStreamEvent(streamState, {
-        type: 'done',
-        modelId: model,
-      });
-    }
+    streamState.status = 'done';
+    await emitStreamEvent(streamState, {
+      type: 'done',
+      modelId: model,
+    });
   } catch (error) {
     streamState.status = 'error';
     streamState.error = error instanceof Error ? error.message : 'Unknown error';
@@ -236,6 +294,10 @@ async function handleChat(
       type: 'error',
       error: streamState.error,
     });
+  } finally {
+    if (streamState.status !== 'streaming') {
+      scheduleStreamCleanup(tabId, sessionId, requestId);
+    }
   }
 }
 
@@ -252,6 +314,8 @@ function handleAck(message: StreamAckEnvelope): void {
 
   state.lastAckSeq = Math.max(state.lastAckSeq, message.lastSeq);
   state.updatedAt = now();
+  state.events = state.events.filter((event) => (event.seq ?? 0) > state.lastAckSeq);
+  scheduleStreamCleanup(message.tabId, message.sessionId, message.requestId);
 }
 
 async function handleResume(
@@ -266,11 +330,14 @@ async function handleResume(
   if (!state) {
     return toSuccess({ resent: 0 });
   }
+  clearStreamCleanupTimer(key);
 
   const pending = state.events.filter((event) => (event.seq ?? 0) > message.lastSeq);
   for (const event of pending) {
     await sendToSidePanel(message.tabId, event);
   }
+
+  scheduleStreamCleanup(message.tabId, message.sessionId, message.requestId);
 
   return toSuccess({ resent: pending.length });
 }

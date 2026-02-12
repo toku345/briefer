@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ApiResponse, ChatState, ExtractedContent } from '@/lib/types';
+import type { ActiveStream, ApiResponse, ChatState, ExtractedContent } from '@/lib/types';
 
 function generateId(prefix: string): string {
   if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
@@ -12,7 +12,7 @@ export function useSendMessage(
   tabId: number | null,
   pageContent: ExtractedContent | null,
   setIsStreaming: (v: boolean) => void,
-  setActiveStream: (stream: { requestId: string; sessionId: string } | null) => void,
+  setActiveStream: (stream: ActiveStream | null) => void,
   startKeepalive: () => void,
   stopKeepalive: () => void,
 ) {
