@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { clearChat } from '@/lib/chat-store';
+import type { MessageType } from '@/lib/types';
 import { ChatContainer } from './components/ChatContainer';
 import { ErrorMessage } from './components/ErrorMessage';
 import { Header } from './components/Header';
@@ -37,8 +38,15 @@ export function App() {
   );
   const queryClient = useQueryClient();
 
+  // Side Panel 初期化完了を Service Worker に通知（コンテキストメニューの pending テキスト受信用）
   useEffect(() => {
-    const listener = (message: { type: string; text?: string }) => {
+    if (tabId) {
+      chrome.runtime.sendMessage({ type: 'SIDEPANEL_READY', tabId });
+    }
+  }, [tabId]);
+
+  useEffect(() => {
+    const listener = (message: MessageType) => {
       if (message.type === 'SELECTED_TEXT' && message.text) {
         setSelectedText(message.text);
       }

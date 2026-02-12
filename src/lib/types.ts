@@ -48,7 +48,8 @@ export type MessageType =
   | { type: 'GET_CHAT_STATE'; tabId: number }
   | { type: 'GET_MODELS' }
   | { type: 'CANCEL_CHAT'; tabId: number }
-  | { type: 'SELECTED_TEXT'; text: string };
+  | { type: 'SELECTED_TEXT'; tabId: number; text: string }
+  | { type: 'SIDEPANEL_READY'; tabId: number };
 
 // Chrome runtime message response types
 export interface GetModelsResponse {

@@ -18,6 +18,9 @@ function isValidSender(sender: chrome.runtime.MessageSender): boolean {
 // tabId 別に進行中リクエストの AbortController を管理
 const activeRequests = new Map<number, AbortController>();
 
+// コンテキストメニューから選択されたテキストを Side Panel 起動完了まで保持
+const pendingSelectedText = new Map<number, string>();
+
 // Keepalive ポート: Side Panel からの定期 ping で Service Worker のアイドルタイムアウトを防止
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name !== KEEPALIVE_PORT_NAME) return;
@@ -45,6 +48,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'briefer-ask' && info.selectionText && tab?.id) {
     const tabId = tab.id;
 
+    // Side Panel が SIDEPANEL_READY を送信するまでテキストを保持
+    pendingSelectedText.set(tabId, info.selectionText);
+
     chrome.sidePanel
       .setOptions({
         tabId,
@@ -52,16 +58,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
         enabled: true,
       })
       .then(() => chrome.sidePanel.open({ tabId }))
-      .then(() => {
-        // Side Panel の初期化完了を待ってから選択テキストを送信
-        setTimeout(() => {
-          chrome.runtime.sendMessage({
-            type: 'SELECTED_TEXT',
-            text: info.selectionText,
-          });
-        }, 500);
-      })
       .catch((err) => {
+        pendingSelectedText.delete(tabId);
         console.error('[Briefer] Failed to open side panel for context menu:', err);
       });
   }
@@ -137,6 +135,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (controller) {
       controller.abort();
       activeRequests.delete(tabId);
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+
+  if (message.type === 'SIDEPANEL_READY') {
+    const tabId = message.tabId;
+    if (typeof tabId === 'number') {
+      const text = pendingSelectedText.get(tabId);
+      if (text) {
+        pendingSelectedText.delete(tabId);
+        chrome.runtime.sendMessage({ type: 'SELECTED_TEXT', tabId, text });
+      }
     }
     sendResponse({ success: true });
     return true;
