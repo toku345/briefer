@@ -66,13 +66,15 @@ Service Worker 中継の廃止、Direct Fetch アーキテクチャへの移行�
 
 カスタム Vite プラグイン（`copyStaticAssets` 60行）を廃止し、WXT に移行済み。
 
-| 作業 | 内容 |
-|------|------|
-| WXT 導入 | `wxt` + `@wxt-dev/module-react` を導入、`vite` 直接依存を削除 |
-| manifest | `src/manifest.json` → `wxt.config.ts` の TypeScript ベース定義に移行 |
-| エントリポイント | `src/` → `entrypoints/` + `lib/` + `public/` に再配置 |
-| vite.config.ts | カスタムプラグイン削除。WXT が出力構造を自動管理 |
-| HMR | WXT の開発モード（`bun run dev`）で Side Panel のホットリロードを有効化 |
+| 作業 | 状態 | 内容 |
+|------|------|------|
+| WXT 導入 | ✅ | `wxt` + `@wxt-dev/module-react` を導入、`vite` 直接依存を削除 |
+| manifest | ✅ | `src/manifest.json` → `wxt.config.ts` の TypeScript ベース定義に移行 |
+| エントリポイント | ✅ | `src/` → `entrypoints/` + `lib/` + `public/` に再配置 |
+| vite.config.ts | ✅ | カスタムプラグイン削除。WXT が出力構造を自動管理 |
+| HMR | ✅ | WXT の開発モード（`bun run dev`）で Side Panel のホットリロードを有効化 |
+| テスト更新 | ✅ | 全7テストファイルのインポートパス更新、`WxtVitest` プラグイン統合 |
+| ドキュメント | ✅ | CLAUDE.md, README.md のパス・コマンド更新 |
 
 ### Phase 3: UX 強化
 
