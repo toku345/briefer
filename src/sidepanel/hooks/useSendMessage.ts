@@ -8,6 +8,12 @@ function generateId(prefix: string): string {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+interface SendMessageInput {
+  userMessage: string;
+  requestId: string;
+  sessionId: string;
+}
+
 export function useSendMessage(
   tabId: number | null,
   pageContent: ExtractedContent | null,
@@ -18,14 +24,12 @@ export function useSendMessage(
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (userMessage: string) => {
+  const mutation = useMutation({
+    mutationFn: async ({ userMessage, requestId, sessionId }: SendMessageInput) => {
       if (!tabId || !pageContent) {
         throw new Error('準備ができていません');
       }
 
-      const requestId = generateId('req');
-      const sessionId = `tab-${tabId}`;
       setActiveStream({ requestId, sessionId });
 
       // onMutateで既にユーザーメッセージが追加されているため、currentStateをそのまま使用
@@ -58,14 +62,23 @@ export function useSendMessage(
 
       return userMessage;
     },
-    onMutate: async (userMessage) => {
+    onMutate: async ({ userMessage, requestId, sessionId }) => {
       setIsStreaming(true);
 
       await queryClient.cancelQueries({ queryKey: ['chat', tabId] });
       const previousState = queryClient.getQueryData<ChatState>(['chat', tabId]);
 
       queryClient.setQueryData<ChatState>(['chat', tabId], (old) => ({
-        messages: [...(old?.messages ?? []), { role: 'user', content: userMessage }],
+        messages: [
+          ...(old?.messages ?? []),
+          {
+            role: 'user',
+            content: userMessage,
+            createdAt: Date.now(),
+            requestId,
+            sessionId,
+          },
+        ],
         pageContent: old?.pageContent ?? null,
       }));
 
@@ -80,4 +93,17 @@ export function useSendMessage(
       stopKeepalive();
     },
   });
+
+  const mutate = (userMessage: string) => {
+    mutation.mutate({
+      userMessage,
+      requestId: generateId('req'),
+      sessionId: `tab-${tabId ?? 'unknown'}`,
+    });
+  };
+
+  return {
+    ...mutation,
+    mutate,
+  };
 }

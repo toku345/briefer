@@ -159,6 +159,7 @@ body {
 }
 
 .follow-up-actions {
+  display: flex;
   justify-content: flex-start;
 }
 

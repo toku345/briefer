@@ -93,9 +93,7 @@ export function useStreamListener(tabId: number | null, onStreamEnd?: () => void
           return;
         }
       } else if (!currentStream && chunk.requestId && chunk.sessionId) {
-        const attached = { requestId: chunk.requestId, sessionId: chunk.sessionId };
-        setActiveStreamState(attached);
-        activeStreamRef.current = attached;
+        setActiveStream({ requestId: chunk.requestId, sessionId: chunk.sessionId });
       }
 
       if (isDuplicateSeq(chunk.seq, lastSeqRef.current)) {
@@ -167,7 +165,7 @@ export function useStreamListener(tabId: number | null, onStreamEnd?: () => void
 
     chrome.runtime.onMessage.addListener(listener);
     return () => chrome.runtime.onMessage.removeListener(listener);
-  }, [tabId, queryClient]);
+  }, [tabId, queryClient, setActiveStream]);
 
   const clearError = useCallback(() => setError(null), []);
 
