@@ -62,17 +62,17 @@ PR #16 で Service Worker 中継を廃止し、Side Panel → vLLM 直接 fetch 
 Service Worker 中継の廃止、Direct Fetch アーキテクチャへの移行。
 詳細は PR #16 を参照。
 
-### Phase 2: WXT 移行
+### Phase 2: WXT 移行 ✅ 完了
 
-カスタム Vite プラグイン（`copyStaticAssets` 60行）を廃止し、WXT に移行。
+カスタム Vite プラグイン（`copyStaticAssets` 60行）を廃止し、WXT に移行済み。
 
 | 作業 | 内容 |
 |------|------|
-| WXT 導入 | `bun add -d wxt`、WXT のファイル規約に合わせてディレクトリ構造を変更 |
-| manifest | `src/manifest.json` → WXT の TypeScript ベース定義に移行 |
-| エントリポイント | WXT の規約（`entrypoints/`）に合わせてファイル配置を変更 |
+| WXT 導入 | `wxt` + `@wxt-dev/module-react` を導入、`vite` 直接依存を削除 |
+| manifest | `src/manifest.json` → `wxt.config.ts` の TypeScript ベース定義に移行 |
+| エントリポイント | `src/` → `entrypoints/` + `lib/` + `public/` に再配置 |
 | vite.config.ts | カスタムプラグイン削除。WXT が出力構造を自動管理 |
-| HMR | WXT の開発モードで Side Panel のホットリロードを有効化 |
+| HMR | WXT の開発モード（`bun run dev`）で Side Panel のホットリロードを有効化 |
 
 ### Phase 3: UX 強化
 

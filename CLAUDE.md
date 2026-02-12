@@ -10,8 +10,8 @@ Briefer はローカル LLM（vLLM）を使って Web ページを要約・チ�
 
 ```bash
 bun install              # 依存関係のインストール
-bun run build            # ビルド（型チェック + Vite）
-bun run dev              # 開発モード（ファイル監視）
+bun run build            # ビルド（WXT）
+bun run dev              # 開発モード（WXT HMR）
 bun run test             # テスト実行（Vitest）
 bun run test <file>      # 単一ファイルのテスト
 bun run typecheck        # 型チェックのみ
@@ -35,7 +35,7 @@ bun run test         # テスト
 1. `bun run build` でビルド
 2. `chrome://extensions` を開く
 3. デベロッパーモードを有効化
-4. 「パッケージ化されていない拡張機能を読み込む」から `dist` を選択
+4. 「パッケージ化されていない拡張機能を読み込む」から `.output/chrome-mv3` を選択
 
 ## アーキテクチャ
 
@@ -61,16 +61,17 @@ Side Panel から vLLM API へ直接 fetch する構成。Service Worker はリ�
 
 | ファイル | 役割 |
 |---------|------|
-| `src/lib/types.ts` | 共通型定義（ChatMessage, StreamChunk, Settings等） |
-| `src/lib/extractor.ts` | ページコンテンツ抽出（article > main > role="main" > body） |
-| `src/lib/llm-client.ts` | vLLM APIクライアント（ストリーミング対応、Side Panelから直接呼び出し） |
-| `src/lib/settings-store.ts` | 設定管理（サーバーURL、temperature、max_tokens） |
-| `src/background/index.ts` | Service Worker（Side Panel開閉 + コンテキストメニュー） |
-| `src/sidepanel/index.tsx` | Side Panel エントリーポイント |
-| `src/sidepanel/hooks/useChatStream.ts` | 統合ストリーミングhook（AbortController管理含む） |
-| `src/sidepanel/hooks/usePageContent.ts` | executeScriptによるページコンテンツ取得 |
-| `src/sidepanel/hooks/useServerHealth.ts` | vLLMサーバーのヘルスチェック |
+| `lib/types.ts` | 共通型定義（ChatMessage, StreamChunk, Settings等） |
+| `lib/extractor.ts` | ページコンテンツ抽出（article > main > role="main" > body） |
+| `lib/llm-client.ts` | vLLM APIクライアント（ストリーミング対応、Side Panelから直接呼び出し） |
+| `lib/settings-store.ts` | 設定管理（サーバーURL、temperature、max_tokens） |
+| `entrypoints/background.ts` | Service Worker（Side Panel開閉 + コンテキストメニュー） |
+| `entrypoints/sidepanel/index.tsx` | Side Panel エントリーポイント |
+| `entrypoints/sidepanel/hooks/useChatStream.ts` | 統合ストリーミングhook（AbortController管理含む） |
+| `entrypoints/sidepanel/hooks/usePageContent.ts` | executeScriptによるページコンテンツ取得 |
+| `entrypoints/sidepanel/hooks/useServerHealth.ts` | vLLMサーバーのヘルスチェック |
+| `wxt.config.ts` | WXT設定（manifest定義、React module） |
 
 ## LLM設定
 
-`src/lib/settings-store.ts` で管理。サーバーURL（デフォルト: `http://localhost:8000/v1`）、temperature、max_tokens を UI から設定可能。モデルは vLLM サーバーから動的に取得し、UI 上で選択可能。
+`lib/settings-store.ts` で管理。サーバーURL（デフォルト: `http://localhost:8000/v1`）、temperature、max_tokens を UI から設定可能。モデルは vLLM サーバーから動的に取得し、UI 上で選択可能。
