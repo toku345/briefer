@@ -2,157 +2,116 @@
 
 ## Context
 
-Brieferはローカル vLLM サーバーを使用してWebページを要約・チャットする Chrome 拡張機能（MV3）。
-現在の設計では Service Worker がすべての LLM 通信を中継しており、MV3 の 30 秒タイムアウト制約に起因する Keepalive 機構の複雑さ、ストリーミングキャンセル不能、エラーハンドリングの複雑化といった問題を抱えている。
-本プランでは外部 LLM サーバーの制約のみを維持し、アーキテクチャを根本から再設計する。
+Briefer はローカル vLLM サーバーを使用して Web ページを要約・チャットする Chrome 拡張機能（MV3）。
+PR #16 で Service Worker 中継を廃止し、Side Panel → vLLM 直接 fetch アーキテクチャに移行済み。
+本プランでは、ビルド基盤の刷新と UX 強化を段階的に実施する。
 
 ---
 
-## 分析チームの所見サマリー
+## 現在の状態
 
-### UX担当
-- ウェルカム画面が貧弱（固定テキストのみ）。クイックアクションが必要
-- コンテンツ抽出状態が不可視。ユーザーは成功/失敗を判別できない
-- ストリーミング中断手段がない（Stop Generation ボタン不在）
-- エラー時にリトライ手段がない
-- 設定がモデル選択のみ。サーバーURL変更不可はローカルLLMツールとして致命的
-- ダークテーマ固定
+### 完了済み（PR #16）
 
-### 技術アーキテクチャ担当
-- **最重要**: Side Panel から vLLM へ直接 fetch 可能（`host_permissions` で許可済み）。Service Worker 中継は不要
-- 直接 fetch にすれば Keepalive 不要、AbortController でキャンセル可能、エラーハンドリングが単純化
-- Content Script も `chrome.scripting.executeScript` の戻り値で代替可能（100ms 遅延ハック解消）
-- 状態管理は TanStack Query + カスタム hook の洗練で十分（Zustand 追加は過剰）
+- Side Panel から vLLM への直接 fetch（Keepalive 不要）
+- `chrome.scripting.executeScript` 戻り値方式（Content Script 廃止）
+- `useChatStream` 統合 hook（AbortController によるキャンセル対応）
+- `useServerHealth` ヘルスチェック hook
+- 設定管理（serverUrl, temperature, maxTokens）
+- コンテキストメニュー（右クリック「Briefer で質問する」）
+- Service Worker の軽量化（170行 → 57行）
 
-### 悪魔の代弁者
-- CSP に `connect-src` が未指定 → 直接 fetch 前に PoC 検証が必須
-- 全てを一度に変えるのはリスク大 → 段階的実施を推奨
-- 現在良くできている点: メッセージ型の判別共用体、セキュリティ対策（sender検証、XMLエスケープ、プロンプトインジェクション防御）、ThinkTagFilter の状態マシン設計
-- `background.test.ts`（444行）は Service Worker 中継前提 → 書き直し必要
+### 維持している設計
 
-### 既存ツール愛用者
-- 競合（ChatGPT Sidebar, Sider, Monica AI）と比較してプロンプトテンプレート、右クリックメニュー、サーバーURL設定が欠如
-- ローカル LLM はプライバシー面で最大の差別化要因 → 明示的に訴求すべき
-- サーバー接続状態の常時表示が必要（現在はチャット送信時に初めてエラー判明）
-- OpenAI 互換 API サーバー（Ollama, llama.cpp 等）への汎用対応で価値向上
+- `ThinkTagFilter` の状態マシン設計
+- `escapeXml`, `sanitizeTitle`, `sanitizeContent` のセキュリティ対策
+- `StreamChunk` の判別共用体型
+- `buildSystemMessage` のプロンプト構築
+- `sender.id` 検証による送信元バリデーション
 
 ---
 
-## 設計方針
+## 技術選定の判断記録
 
-### 核心的な変更: Service Worker 中継の廃止
+### 採用
 
-**Before（現在）:**
-```
-Side Panel → sendMessage → Service Worker → fetch → vLLM
-Side Panel ← sendMessage ← Service Worker ← SSE ← vLLM
-+ Keepalive port (20s ping)
-```
+| 技術 | 理由 |
+|------|------|
+| React 19 + TanStack Query | エコシステム（react-markdown, Testing Library）の恩恵が大きい。代替で得られるメリットがない |
+| react-markdown + remark-gfm | ストリーミング Markdown レンダリングに最適。自前実装は工数大 |
+| Vitest + Biome | テスト・Lint 構成として現状最適 |
+| WXT | カスタム Vite プラグインを撲滅。manifest の TS 定義、HMR、出力構造の自動化 |
+| zod | Chrome メッセージングの runtime validation。`unknown` が飛んでくる境界の型安全 |
+| Playwright | MV3 拡張機能の E2E テスト。モック vLLM サーバーとの結合検証 |
 
-**After（再設計）:**
-```
-Side Panel → fetch → vLLM (直接)
-Side Panel → executeScript → DOM抽出 (戻り値)
-```
+### 不採用（必要になったら再検討）
 
-Service Worker の残存責務:
-- `chrome.action.onClicked` → Side Panel 開閉
-- `chrome.sidePanel.setOptions` / `chrome.sidePanel.open`
-- `chrome.contextMenus` → 選択テキスト送信
+| 技術 | 理由 |
+|------|------|
+| Tailwind CSS | Side Panel の CSS 規模が小さく、プレーン CSS で管理可能 |
+| Zustand | TanStack Query + chrome.storage + useState で状態管理が完結。隙間がない |
+| IndexedDB | chrome.storage.session（10MB）で十分。チャット1会話あたり数十KB |
+| Preact / Solid / Svelte | バンドルサイズは拡張機能では問題にならない。エコシステムの喪失が大きい |
+| WASM (Rust等) | クライアント側に計算ボトルネックがない。重い処理はすべて vLLM サーバー |
 
 ---
 
 ## 実装フェーズ
 
-### Phase 0: PoC 検証
+### Phase 1: Core Architecture ✅ 完了（PR #16）
 
-Side Panel から `http://localhost:8000/v1/models` への直接 fetch が動作することを確認。
-CSP に `connect-src 'self' http://localhost:*` の追加が必要か検証。
+Service Worker 中継の廃止、Direct Fetch アーキテクチャへの移行。
+詳細は PR #16 を参照。
 
-### Phase 1: Core Architecture（Service Worker 中継廃止） ✅
+### Phase 2: WXT 移行
 
-**変更ファイル:**
+カスタム Vite プラグイン（`copyStaticAssets` 60行）を廃止し、WXT に移行。
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `src/manifest.json` | `content_scripts` セクション削除、CSP に `connect-src` 追加、`contextMenus` permission 追加 |
-| `src/background/index.ts` | CHAT/GET_CHAT_STATE/GET_MODELS ハンドラ削除、Keepalive リスナー削除。Side Panel open + contextMenus のみ（~57行に縮小） |
-| `src/lib/llm-client.ts` | `AbortSignal` パラメータ追加、設定からURL取得に変更 |
-| `src/lib/settings-store.ts` | 拡充: サーバーURL、temperature、max_tokens を管理 |
-| `src/lib/types.ts` | Keepalive/STREAM_CHUNK/CHAT 関連型を削除、Settings 型追加 |
-| `src/sidepanel/hooks/usePageContent.ts` | `chrome.scripting.executeScript` + 戻り値方式に変更 |
-| `src/sidepanel/hooks/useChatStream.ts` | **新規**: 統合ストリーミング hook（AbortController 管理を含む） |
-| `src/sidepanel/hooks/useModels.ts` | 直接 `fetchModels()` 呼び出し |
-| `src/sidepanel/hooks/useServerHealth.ts` | **新規**: `/v1/models` への定期ヘルスチェック（30秒間隔） |
+| 作業 | 内容 |
+|------|------|
+| WXT 導入 | `bun add -d wxt`、WXT のファイル規約に合わせてディレクトリ構造を変更 |
+| manifest | `src/manifest.json` → WXT の TypeScript ベース定義に移行 |
+| エントリポイント | WXT の規約（`entrypoints/`）に合わせてファイル配置を変更 |
+| vite.config.ts | カスタムプラグイン削除。WXT が出力構造を自動管理 |
+| HMR | WXT の開発モードで Side Panel のホットリロードを有効化 |
 
-**削除ファイル:**
+### Phase 3: UX 強化
 
-| ファイル | 理由 |
-|---------|------|
-| `src/content/index.ts` | executeScript 戻り値方式で不要 |
-| `src/sidepanel/hooks/useKeepalive.ts` | 直接 fetch で Keepalive 不要 |
-| `src/sidepanel/hooks/useSendMessage.ts` | `useChatStream` に統合 |
-| `src/sidepanel/hooks/useStreamListener.ts` | `useChatStream` に統合 |
-| `src/lib/chat-store.ts` | Side Panel 内で TanStack Query + chrome.storage 直接管理 |
+PR #18 の UX 要素を Direct Fetch アーキテクチャ上に再実装。
 
-**維持した設計:**
-- `ThinkTagFilter` の状態マシン設計（Side Panel 内で使用）
-- `escapeXml`, `sanitizeTitle`, `sanitizeContent` のセキュリティ対策
-- `StreamChunk` の判別共用体型
-- `buildSystemMessage` のプロンプト構築
+| コンポーネント | 内容 |
+|-------------|------|
+| `PageContextBar` | ページタイトル + URL 表示（ローカルアイコン使用、プライバシー配慮） |
+| `ErrorMessage` | エラー分類（サーバー未到達/ページ不可/その他）と対処法表示 |
+| `Header` | 会話クリア「+」ボタン、接続ステータスドット（緑/黄/赤）、設定ポップオーバー |
+| `WelcomeMessage` | Quick Actions（「要約」「重要ポイント」「簡単に説明」） |
+| `InputContainer` | 送信不可理由の表示（placeholder 切替） |
+| 設定 | vLLM URL 変更 + `optional_host_permissions` による動的パーミッション |
+| コンテキストメニュー | テキスト選択 → 右クリック → 「Briefer で質問する」（READY ハンドシェイク方式） |
+| キーボードショートカット | Ctrl+Shift+B / Cmd+Shift+B でサイドパネル開閉 |
 
-### Phase 2: UX Enhancement
+### Phase 4: 型安全・テスト強化
 
-| ファイル | 変更内容 |
-|---------|---------|
-| `src/sidepanel/components/WelcomeMessage.tsx` | クイックアクションボタン追加（「要約」「キーポイント抽出」「翻訳」等） |
-| `src/sidepanel/components/Header.tsx` | サーバー接続状態インジケーター（緑/赤ドット）、設定ギアアイコン追加 |
-| `src/sidepanel/components/SettingsPanel.tsx` | **新規**: サーバーURL、temperature、max_tokens、応答言語の設定UI |
-| `src/sidepanel/components/InputContainer.tsx` | ストリーミング中は送信ボタンを停止ボタンに切替（Phase 1 で実装済み） |
-| `src/sidepanel/components/MessageBubble.tsx` | エラー時リトライボタン、モデル名表示、再生成ボタン追加 |
-| `src/sidepanel/style.css` | CSS 変数によるテーマシステム導入（ライト/ダーク切替） |
-| `src/background/index.ts` | `chrome.contextMenus` 登録（Phase 1 で実装済み） |
+| 作業 | 内容 |
+|------|------|
+| zod スキーマ | `StreamChunk`, `Settings`, `MessageType` 等の runtime validation 追加 |
+| Playwright E2E | モック vLLM サーバーを起動し、拡張機能の実機挙動を自動検証 |
+| コンポーネントテスト | Phase 3 で追加した UI コンポーネントのテスト |
 
-### Phase 3: Content Extraction 改善 + テスト拡充
+### Phase 5: Power Features（将来）
 
-- `@mozilla/readability` + `turndown` による高品質コンテンツ抽出
-- `executeScript` で Readability.js のロジックを注入実行
-- コンポーネントテスト、hook テスト大幅追加
-
-### Phase 4: Power Features
-
+- ライト/ダークテーマ切替（CSS 変数）
 - 会話エクスポート（Markdown/JSON）
-- キーボードショートカット
+- `@mozilla/readability` + `turndown` による高品質コンテンツ抽出
+- PDF / YouTube 字幕対応
 - ThinkTagFilter の汎用 StreamFilter インターフェース化
-- PDF/YouTube 字幕対応
-
----
-
-## `useChatStream` hook の設計概要（Phase 1 の核心）
-
-3 つの hook（`useSendMessage`, `useStreamListener`, `useKeepalive`）に分散していたストリーミングロジックを 1 つに統合:
-
-```
-useChatStream(tabId, pageContent)
-  ├── sendMessage(userMessage)
-  │     ├── AbortController 生成
-  │     ├── ユーザーメッセージを QueryClient に楽観的追加
-  │     ├── streamChat() を直接呼び出し（AbortSignal 付き）
-  │     ├── AsyncGenerator を消費 → streamingContent を更新
-  │     ├── ThinkTagFilter でフィルタリング
-  │     ├── done 時に履歴に確定 + chrome.storage.session に保存
-  │     └── error 時にエラー状態を設定
-  ├── cancel() → AbortController.abort()
-  ├── streamingContent: string
-  ├── isStreaming: boolean
-  └── error: string | null
-```
+- OpenAI 互換 API サーバー（Ollama, llama.cpp 等）への汎用対応
 
 ---
 
 ## 検証方法
 
-### Phase 1 完了後
+各 Phase 完了後:
+
 ```bash
 bun run typecheck    # 型チェック
 bun run check        # Lint + フォーマット
@@ -160,6 +119,7 @@ bun run test         # テスト
 ```
 
 手動テスト:
+
 1. 拡張機能をリロードし、Side Panel を開く
 2. ページ要約を実行 → ストリーミング応答を確認
 3. ストリーミング中に停止ボタンで中断 → 即座に停止することを確認
