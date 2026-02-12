@@ -33,10 +33,23 @@ export function Header({ onClearChat }: HeaderProps) {
 
   const handleSaveUrl = async () => {
     const trimmed = urlInput.trim() || DEFAULT_VLLM_BASE_URL;
-    await saveVllmBaseUrl(trimmed);
-    setUrlInput(trimmed);
-    queryClient.invalidateQueries({ queryKey: ['models'] });
-    setIsSettingsOpen(false);
+    try {
+      const urlObj = new URL(trimmed);
+
+      // localhost 以外のホストでは追加権限が必要
+      if (urlObj.hostname !== 'localhost' && urlObj.hostname !== '127.0.0.1') {
+        const origin = `${urlObj.protocol}//${urlObj.host}/*`;
+        const granted = await chrome.permissions.request({ origins: [origin] });
+        if (!granted) return;
+      }
+
+      await saveVllmBaseUrl(trimmed);
+      setUrlInput(trimmed);
+      queryClient.invalidateQueries({ queryKey: ['models'] });
+      setIsSettingsOpen(false);
+    } catch {
+      setUrlInput(DEFAULT_VLLM_BASE_URL);
+    }
   };
 
   const statusColor = isLoading ? '#ffa500' : isError ? '#ff4444' : '#44ff44';

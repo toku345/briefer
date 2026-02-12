@@ -13,7 +13,8 @@
       "description": "Briefer を開く"
     }
   },
-  "host_permissions": ["http://localhost:8000/*"],
+  "host_permissions": ["http://localhost/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "action": {
     "default_title": "Open Briefer",
     "default_icon": {
