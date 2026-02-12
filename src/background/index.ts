@@ -49,9 +49,16 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.contextMenus.create({
-    id: 'briefer-ask',
-    title: 'Briefer で質問する',
-    contexts: ['selection'],
-  });
+  chrome.contextMenus.create(
+    {
+      id: 'briefer-ask',
+      title: 'Briefer で質問する',
+      contexts: ['selection'],
+    },
+    () => {
+      if (chrome.runtime.lastError) {
+        console.error('[Briefer] Failed to create context menu:', chrome.runtime.lastError.message);
+      }
+    },
+  );
 });

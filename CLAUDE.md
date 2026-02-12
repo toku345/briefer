@@ -37,50 +37,38 @@ bun run test         # テスト
 
 ## アーキテクチャ
 
+Side Panel から vLLM API へ直接 fetch する構成。Service Worker はリレーせず、Side Panel の開閉とコンテキストメニューのみ担当。
+
 ```
-┌─────────────┐     GET_CONTENT      ┌─────────────────┐
-│ Side Panel  │ ──────────────────▶  │ Content Script  │
-│ (チャットUI) │ ◀──────────────────  │ (DOM解析)       │
-└─────────────┘                      └─────────────────┘
+┌─────────────┐     POST /v1/chat/completions
+│ Side Panel  │ ─────────────────────────────────▶ vLLM
+│ (チャットUI) │ ◀───────── streaming response ────  :8000
+└─────────────┘
        │
-       │ CHAT (with tabId)
+       │ chrome.scripting.executeScript (戻り値でDOM取得)
        ▼
-┌─────────────────┐     POST /v1/chat/completions
-│ Service Worker  │ ─────────────────────────────────▶ vLLM
-│ (API・状態管理)  │ ◀───────── streaming response ────  :8000
+   対象タブ
+
+┌─────────────────┐
+│ Service Worker  │  Side Panel 開閉 + コンテキストメニュー登録のみ
+│ (軽量)          │
 └─────────────────┘
-       │
-       │ STREAM_CHUNK
-       ▼
-   Side Panel
 ```
-
-### コンポーネント間通信
-
-- **Side Panel → Content Script**: `chrome.tabs.sendMessage(tabId, { type: 'GET_CONTENT' })`
-- **Side Panel → Service Worker**: `chrome.runtime.sendMessage({ type: 'CHAT', tabId, payload })`
-- **Service Worker → Side Panel**: `chrome.runtime.sendMessage({ type: 'STREAM_CHUNK', tabId, payload })`
-
-重要: Side Panelからのメッセージでは`sender.tab`がundefinedになるため、メッセージに`tabId`を含める必要がある。
 
 ### 主要ファイル
 
 | ファイル | 役割 |
 |---------|------|
-| `src/lib/types.ts` | 共通型定義（ChatMessage, StreamChunk等） |
+| `src/lib/types.ts` | 共通型定義（ChatMessage, StreamChunk, Settings等） |
 | `src/lib/extractor.ts` | ページコンテンツ抽出（article > main > role="main" > body） |
-| `src/lib/llm-client.ts` | vLLM APIクライアント（ストリーミング対応） |
-| `src/lib/chat-store.ts` | 会話履歴管理（chrome.storage.session） |
-| `src/content/index.ts` | Content Script |
-| `src/background/index.ts` | Service Worker |
-| `src/sidepanel/index.ts` | Side Panel UI |
+| `src/lib/llm-client.ts` | vLLM APIクライアント（ストリーミング対応、Side Panelから直接呼び出し） |
+| `src/lib/settings-store.ts` | 設定管理（サーバーURL、temperature、max_tokens） |
+| `src/background/index.ts` | Service Worker（Side Panel開閉 + コンテキストメニュー） |
+| `src/sidepanel/index.tsx` | Side Panel エントリーポイント |
+| `src/sidepanel/hooks/useChatStream.ts` | 統合ストリーミングhook（AbortController管理含む） |
+| `src/sidepanel/hooks/usePageContent.ts` | executeScriptによるページコンテンツ取得 |
+| `src/sidepanel/hooks/useServerHealth.ts` | vLLMサーバーのヘルスチェック |
 
 ## LLM設定
 
-`src/lib/llm-client.ts` で設定:
-
-```typescript
-const VLLM_BASE_URL = 'http://localhost:8000/v1';
-```
-
-モデルはvLLMサーバーから利用可能なモデルを動的に取得し、UIで選択可能。
+`src/lib/settings-store.ts` で管理。サーバーURL（デフォルト: `http://localhost:8000/v1`）、temperature、max_tokens をUIから設定可能。モデルはvLLMサーバーから動的に取得。

@@ -89,11 +89,14 @@ describe('background service worker', () => {
     it('onInstalled でメニューを登録する', () => {
       installedListener();
 
-      expect(mockChrome.contextMenus.create).toHaveBeenCalledWith({
-        id: 'briefer-ask',
-        title: 'Briefer で質問する',
-        contexts: ['selection'],
-      });
+      expect(mockChrome.contextMenus.create).toHaveBeenCalledWith(
+        {
+          id: 'briefer-ask',
+          title: 'Briefer で質問する',
+          contexts: ['selection'],
+        },
+        expect.any(Function),
+      );
     });
 
     it('briefer-ask クリック時にサイドパネルを開く', () => {
