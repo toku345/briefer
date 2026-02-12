@@ -48,7 +48,8 @@ interface ChatCompletionRequest {
 }
 
 export async function fetchModels(serverUrl?: string, signal?: AbortSignal): Promise<ModelInfo[]> {
-  const baseUrl = serverUrl ?? (await getSettings()).serverUrl;
+  const rawUrl = serverUrl ?? (await getSettings()).serverUrl;
+  const baseUrl = rawUrl.replace(/\/+$/, '');
 
   const response = await fetch(`${baseUrl}/models`, { signal });
   if (!response.ok) {
@@ -113,6 +114,7 @@ export async function* streamChat(
   signal?: AbortSignal,
 ): AsyncGenerator<StreamChunk> {
   const settings = await getSettings();
+  const serverUrl = settings.serverUrl.replace(/\/+$/, '');
   const systemMessage = buildSystemMessage(pageContent);
 
   const apiMessages = messages.map(({ role, content }) => ({ role, content }));
@@ -125,7 +127,7 @@ export async function* streamChat(
     stream: true,
   };
 
-  const response = await fetch(`${settings.serverUrl}/chat/completions`, {
+  const response = await fetch(`${serverUrl}/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(request),

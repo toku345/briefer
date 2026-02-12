@@ -28,6 +28,11 @@ const mockChrome = {
     setOptions: vi.fn().mockResolvedValue(undefined),
     open: vi.fn().mockResolvedValue(undefined),
   },
+  storage: {
+    session: {
+      set: vi.fn().mockResolvedValue(undefined),
+    },
+  },
   contextMenus: {
     create: vi.fn(),
     onClicked: {
@@ -91,7 +96,7 @@ describe('background service worker', () => {
       });
     });
 
-    it('briefer-ask クリック時にサイドパネルを開く', async () => {
+    it('briefer-ask クリック時にサイドパネルを開く', () => {
       const info = {
         menuItemId: 'briefer-ask',
         selectionText: '選択テキスト',
@@ -104,6 +109,10 @@ describe('background service worker', () => {
         tabId: 789,
         path: 'sidepanel/index.html',
         enabled: true,
+      });
+      expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 789 });
+      expect(mockChrome.storage.session.set).toHaveBeenCalledWith({
+        pending_text_789: '選択テキスト',
       });
     });
 

@@ -56,6 +56,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
       abortRef.current = controller;
 
       let fullResponse = '';
+      let hasError = false;
       const filter = new ThinkTagFilter();
 
       try {
@@ -70,6 +71,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
             }
           } else if (chunk.type === 'error') {
             setError(chunk.error);
+            hasError = true;
             break;
           }
         }
@@ -80,7 +82,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
           setStreamingContent((prev) => prev + remaining);
         }
 
-        if (fullResponse) {
+        if (fullResponse && !hasError) {
           const assistantMessage: ChatMessage = {
             role: 'assistant',
             content: fullResponse,

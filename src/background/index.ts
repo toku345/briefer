@@ -31,20 +31,18 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
     chrome.sidePanel
       .setOptions({ tabId, path: 'sidepanel/index.html', enabled: true })
-      .then(() => chrome.sidePanel.open({ tabId }))
-      .then(() => {
-        // Side Panel 初期化を待ってから選択テキストを送信
-        setTimeout(() => {
-          chrome.runtime.sendMessage({
-            type: 'SELECTED_TEXT',
-            text: info.selectionText,
-            tabId,
-          });
-        }, 500);
-      })
       .catch((err) => {
-        console.error(`[Briefer] Failed to open Side Panel for context menu:`, err);
+        console.error(`[Briefer] Failed to setOptions for context menu tab ${tabId}:`, err);
       });
+
+    chrome.sidePanel.open({ tabId }).catch((err) => {
+      console.error(`[Briefer] Failed to open Side Panel for context menu:`, err);
+    });
+
+    // Side Panel が起動時に読み取れるよう storage に保存（読み取り側は Phase 2 で実装）
+    if (info.selectionText) {
+      chrome.storage.session.set({ [`pending_text_${tabId}`]: info.selectionText });
+    }
   }
 });
 
