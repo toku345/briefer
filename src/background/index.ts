@@ -41,7 +41,9 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
     // Side Panel が起動時に読み取れるよう storage に保存（読み取り側は Phase 2 で実装）
     if (info.selectionText) {
-      chrome.storage.session.set({ [`pending_text_${tabId}`]: info.selectionText });
+      chrome.storage.session.set({ [`pending_text_${tabId}`]: info.selectionText }).catch((err) => {
+        console.error(`[Briefer] Failed to save selected text for tab ${tabId}:`, err);
+      });
     }
   }
 });
