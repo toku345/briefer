@@ -43,7 +43,7 @@ export function Header({ pageContent }: HeaderProps) {
           >
             {models.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.id.split('/').pop()}
+                {m.id.split('/').pop() ?? m.id}
               </option>
             ))}
           </select>

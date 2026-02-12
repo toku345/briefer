@@ -10,7 +10,7 @@ export function MessageList({ messages }: MessageListProps) {
     if (message.id) return message.id;
     if (message.requestId)
       return `${message.role}-${message.requestId}-${message.createdAt ?? index}`;
-    return `${message.role}-${message.content.slice(0, 24)}-${index}`;
+    return `${message.role}-${index}`;
   };
 
   return (

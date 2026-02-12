@@ -25,6 +25,9 @@ function classifyError(message: string): string {
   return message;
 }
 
+const DEFAULT_PROMPT = 'このページを要約して';
+const QUICK_ACTIONS = [DEFAULT_PROMPT, '重要なポイントを3つ教えて', '次に読むべき観点を提案して'];
+
 export function App() {
   const { tabId, error: tabError } = useCurrentTab();
   const { data: pageContent, error: contentError } = usePageContent(tabId);
@@ -59,12 +62,6 @@ export function App() {
     sendMessage(content);
   };
 
-  const quickActions = [
-    'このページを要約して',
-    '重要なポイントを3つ教えて',
-    '次に読むべき観点を提案して',
-  ];
-
   return (
     <div className="container">
       <Header pageContent={pageContent ?? null} />
@@ -73,13 +70,13 @@ export function App() {
         streamingContent={streamingContent}
         isStreaming={isStreaming}
         error={error}
-        quickActions={quickActions}
+        quickActions={QUICK_ACTIONS}
         onQuickAction={handleSend}
       />
       <InputContainer
         onSend={handleSend}
         disabled={!isReady || isSending}
-        defaultValue={messages.length === 0 ? 'このページを要約して' : ''}
+        defaultValue={messages.length === 0 ? DEFAULT_PROMPT : ''}
       />
     </div>
   );

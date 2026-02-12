@@ -166,7 +166,7 @@ body {
   max-width: 92%;
   padding: 10px 12px;
   border-radius: 12px;
-  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .message.user {
@@ -358,7 +358,7 @@ body {
   background: var(--error-bg);
 }
 
-@media (max-width: 420px) {
+@media (width <= 420px) {
   .header {
     flex-direction: column;
     align-items: stretch;
