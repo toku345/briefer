@@ -102,8 +102,17 @@ export function useSendMessage(
     });
   };
 
+  const mutateAsync = (userMessage: string) => {
+    return mutation.mutateAsync({
+      userMessage,
+      requestId: generateId('req'),
+      sessionId: `tab-${tabId ?? 'unknown'}`,
+    });
+  };
+
   return {
     ...mutation,
     mutate,
+    mutateAsync,
   };
 }
