@@ -1,23 +1,43 @@
 import { useEffect, useState } from 'react';
 import { getSettings } from '@/lib/settings-store';
 
+export type ConnectionStatus = 'connected' | 'checking' | 'disconnected';
+
 const HEALTH_CHECK_INTERVAL_MS = 30_000;
 
 export function useServerHealth() {
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  // 初回ヘルスチェック完了まで黄色ドット表示（赤のフラッシュを回避）
+  const [status, setStatus] = useState<ConnectionStatus>('checking');
 
   useEffect(() => {
     let isMounted = true;
 
     async function check() {
+      let serverUrl: string;
       try {
-        const { serverUrl } = await getSettings();
+        ({ serverUrl } = await getSettings());
+      } catch (error) {
+        // Extension storage failure (e.g. context invalidated) is not a server issue
+        console.debug('[useServerHealth] Failed to read settings:', error);
+        if (isMounted) setStatus('disconnected');
+        return;
+      }
+
+      try {
         const response = await fetch(`${serverUrl}/models`, {
           signal: AbortSignal.timeout(5000),
         });
-        if (isMounted) setIsConnected(response.ok);
-      } catch {
-        if (isMounted) setIsConnected(false);
+        if (isMounted) {
+          if (response.ok) {
+            setStatus('connected');
+          } else {
+            console.debug(`[useServerHealth] Server responded with status ${response.status}`);
+            setStatus('disconnected');
+          }
+        }
+      } catch (error) {
+        if (isMounted) setStatus('disconnected');
+        console.debug('[useServerHealth] Health check failed:', error);
       }
     }
 
@@ -30,5 +50,5 @@ export function useServerHealth() {
     };
   }, []);
 
-  return { isConnected };
+  return { status };
 }
