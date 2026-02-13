@@ -54,7 +54,7 @@ describe('useServerHealth', () => {
   });
 
   it('サーバー応答が非 OK の場合に disconnected を返す', async () => {
-    fetchSpy.mockResolvedValue({ ok: false });
+    fetchSpy.mockResolvedValue({ ok: false, status: 500 });
     const { result } = renderHook(() => useServerHealth());
 
     await waitFor(() => {

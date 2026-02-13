@@ -6,6 +6,7 @@ export type ConnectionStatus = 'connected' | 'checking' | 'disconnected';
 const HEALTH_CHECK_INTERVAL_MS = 30_000;
 
 export function useServerHealth() {
+  // 初回ヘルスチェック完了まで黄色ドット表示（赤のフラッシュを回避）
   const [status, setStatus] = useState<ConnectionStatus>('checking');
 
   useEffect(() => {
@@ -26,7 +27,14 @@ export function useServerHealth() {
         const response = await fetch(`${serverUrl}/models`, {
           signal: AbortSignal.timeout(5000),
         });
-        if (isMounted) setStatus(response.ok ? 'connected' : 'disconnected');
+        if (isMounted) {
+          if (response.ok) {
+            setStatus('connected');
+          } else {
+            console.debug(`[useServerHealth] Server responded with status ${response.status}`);
+            setStatus('disconnected');
+          }
+        }
       } catch (error) {
         if (isMounted) setStatus('disconnected');
         console.debug('[useServerHealth] Health check failed:', error);

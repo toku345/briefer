@@ -9,6 +9,12 @@ const STATUS_LABELS: Record<ConnectionStatus, string> = {
   disconnected: 'サーバー未接続',
 };
 
+const STATUS_CLASSES: Record<ConnectionStatus, string> = {
+  connected: 'status-connected',
+  checking: 'status-checking',
+  disconnected: 'status-disconnected',
+};
+
 export function Header() {
   const { data: models, isLoading } = useModels();
   const { model, selectModel } = useSelectedModel();
@@ -31,7 +37,7 @@ export function Header() {
         {/* biome-ignore lint/a11y/useSemanticElements: Biomeはrole="status"に対し<output>を推奨するが、<output>はフォーム計算結果用。接続ステータス表示にはspan+role="status"が意味的に適切 */}
         <span
           role="status"
-          className={`status-dot status-${status}`}
+          className={`status-dot ${STATUS_CLASSES[status]}`}
           title={STATUS_LABELS[status]}
           aria-label={STATUS_LABELS[status]}
         />
