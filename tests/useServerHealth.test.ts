@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { renderHook } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/settings-store', () => ({
@@ -25,7 +25,7 @@ describe('useServerHealth', () => {
   });
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.clearAllMocks();
   });
 
@@ -33,19 +33,23 @@ describe('useServerHealth', () => {
     vi.useRealTimers();
   });
 
-  it('初期状態は checking', () => {
+  it('初期状態は checking', async () => {
     fetchSpy.mockResolvedValue({ ok: true });
-    const { result } = renderHook(() => useServerHealth());
+    const { result, unmount } = renderHook(() => useServerHealth());
 
     expect(result.current.status).toBe('checking');
     expect(result.current.isConnected).toBeNull();
+
+    // effect 内の非同期更新を完了させてから unmount
+    await act(async () => {});
+    unmount();
   });
 
   it('サーバー応答成功時に connected を返す', async () => {
     fetchSpy.mockResolvedValue({ ok: true });
     const { result } = renderHook(() => useServerHealth());
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.status).toBe('connected');
     });
 
@@ -56,7 +60,7 @@ describe('useServerHealth', () => {
     fetchSpy.mockResolvedValue({ ok: false });
     const { result } = renderHook(() => useServerHealth());
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.status).toBe('disconnected');
     });
 
@@ -67,7 +71,7 @@ describe('useServerHealth', () => {
     fetchSpy.mockRejectedValue(new Error('Network error'));
     const { result } = renderHook(() => useServerHealth());
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.status).toBe('disconnected');
     });
 
@@ -76,16 +80,20 @@ describe('useServerHealth', () => {
 
   it('30秒ごとにヘルスチェックを再実行する', async () => {
     fetchSpy.mockResolvedValue({ ok: true });
-    renderHook(() => useServerHealth());
+    const { result } = renderHook(() => useServerHealth());
 
-    await vi.waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
     });
 
-    await vi.advanceTimersByTimeAsync(30_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
     expect(fetchSpy).toHaveBeenCalledTimes(2);
 
-    await vi.advanceTimersByTimeAsync(30_000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 });
