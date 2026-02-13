@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { getSettings } from '@/lib/settings-store';
 
+export type ConnectionStatus = 'connected' | 'checking' | 'disconnected';
+
 const HEALTH_CHECK_INTERVAL_MS = 30_000;
 
 export function useServerHealth() {
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [status, setStatus] = useState<ConnectionStatus>('checking');
 
   useEffect(() => {
     let isMounted = true;
@@ -15,9 +17,9 @@ export function useServerHealth() {
         const response = await fetch(`${serverUrl}/models`, {
           signal: AbortSignal.timeout(5000),
         });
-        if (isMounted) setIsConnected(response.ok);
+        if (isMounted) setStatus(response.ok ? 'connected' : 'disconnected');
       } catch {
-        if (isMounted) setIsConnected(false);
+        if (isMounted) setStatus('disconnected');
       }
     }
 
@@ -30,5 +32,7 @@ export function useServerHealth() {
     };
   }, []);
 
-  return { isConnected };
+  const isConnected = status === 'connected' ? true : status === 'disconnected' ? false : null;
+
+  return { isConnected, status };
 }
