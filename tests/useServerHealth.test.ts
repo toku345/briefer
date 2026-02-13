@@ -38,7 +38,6 @@ describe('useServerHealth', () => {
     const { result, unmount } = renderHook(() => useServerHealth());
 
     expect(result.current.status).toBe('checking');
-    expect(result.current.isConnected).toBeNull();
 
     // effect 内の非同期更新を完了させてから unmount
     await act(async () => {});
@@ -52,8 +51,6 @@ describe('useServerHealth', () => {
     await waitFor(() => {
       expect(result.current.status).toBe('connected');
     });
-
-    expect(result.current.isConnected).toBe(true);
   });
 
   it('サーバー応答が非 OK の場合に disconnected を返す', async () => {
@@ -63,8 +60,6 @@ describe('useServerHealth', () => {
     await waitFor(() => {
       expect(result.current.status).toBe('disconnected');
     });
-
-    expect(result.current.isConnected).toBe(false);
   });
 
   it('fetch 失敗時に disconnected を返す', async () => {
@@ -74,8 +69,6 @@ describe('useServerHealth', () => {
     await waitFor(() => {
       expect(result.current.status).toBe('disconnected');
     });
-
-    expect(result.current.isConnected).toBe(false);
   });
 
   it('30秒ごとにヘルスチェックを再実行する', async () => {
@@ -95,5 +88,59 @@ describe('useServerHealth', () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
     expect(fetchSpy).toHaveBeenCalledTimes(3);
+  });
+
+  it('unmount 後に fetch が解決しても状態を更新しない', async () => {
+    let resolveFetch: ((value: { ok: boolean }) => void) | undefined;
+    fetchSpy.mockReturnValue(
+      new Promise((resolve) => {
+        resolveFetch = resolve;
+      }),
+    );
+
+    const { result, unmount } = renderHook(() => useServerHealth());
+    expect(result.current.status).toBe('checking');
+
+    unmount();
+
+    await act(async () => {
+      resolveFetch?.({ ok: true });
+    });
+
+    expect(result.current.status).toBe('checking');
+  });
+
+  it('unmount 時にインターバルが停止する', async () => {
+    fetchSpy.mockResolvedValue({ ok: true });
+    const { unmount } = renderHook(() => useServerHealth());
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    unmount();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('インターバル中にサーバーがダウンした場合 disconnected に遷移する', async () => {
+    fetchSpy.mockResolvedValue({ ok: true });
+    const { result } = renderHook(() => useServerHealth());
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
+    fetchSpy.mockRejectedValue(new Error('Connection refused'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(result.current.status).toBe('disconnected');
   });
 });
