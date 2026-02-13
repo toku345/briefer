@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ChatMessage, ExtractedContent, StreamChunk } from '../src/lib/types';
-import { SETTINGS_KEY } from '../src/lib/types';
+import type { ChatMessage, ExtractedContent, StreamChunk } from '../lib/types';
+import { SETTINGS_KEY } from '../lib/types';
 
 const TEST_MODEL = 'test-model';
 
@@ -24,7 +24,7 @@ const mockChrome = {
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-const { buildSystemMessage, chat, fetchModels, streamChat } = await import('../src/lib/llm-client');
+const { buildSystemMessage, chat, fetchModels, streamChat } = await import('../lib/llm-client');
 
 describe('llm-client', () => {
   const mockPageContent: ExtractedContent = {

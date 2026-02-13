@@ -3,7 +3,7 @@
  */
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { CopyButton } from '../src/sidepanel/components/CopyButton';
+import { CopyButton } from '../entrypoints/sidepanel/components/CopyButton';
 
 describe('CopyButton', () => {
   const mockWriteText = vi.fn();

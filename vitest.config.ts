@@ -1,7 +1,8 @@
-import { resolve } from 'node:path';
 import { defineConfig } from 'vitest/config';
+import { WxtVitest } from 'wxt/testing';
 
 export default defineConfig({
+  plugins: [WxtVitest()],
   test: {
     globals: true,
     environment: 'jsdom',
@@ -9,12 +10,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/lib/**/*.ts'],
-    },
-  },
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
+      include: ['lib/**/*.ts'],
     },
   },
 });

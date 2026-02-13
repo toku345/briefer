@@ -10,13 +10,13 @@ const mockChromeTabs = {
 
 (globalThis as unknown as { chrome: typeof chrome }).chrome = {
   tabs: mockChromeTabs,
-} as typeof chrome;
+} as unknown as typeof chrome;
 
-let useCurrentTab: typeof import('../src/sidepanel/hooks/useCurrentTab').useCurrentTab;
+let useCurrentTab: typeof import('../entrypoints/sidepanel/hooks/useCurrentTab').useCurrentTab;
 
 describe('useCurrentTab', () => {
   beforeAll(async () => {
-    const module = await import('../src/sidepanel/hooks/useCurrentTab');
+    const module = await import('../entrypoints/sidepanel/hooks/useCurrentTab');
     useCurrentTab = module.useCurrentTab;
   });
 

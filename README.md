@@ -34,7 +34,7 @@ bun run build
 1. `chrome://extensions` を開く
 2. 「デベロッパーモード」を有効化
 3. 「パッケージ化されていない拡張機能を読み込む」をクリック
-4. `dist` フォルダを選択
+4. `.output/chrome-mv3` フォルダを選択
 
 ### 4. vLLMサーバーの起動
 
@@ -67,35 +67,26 @@ bun run typecheck
 
 ## 設定変更
 
-### モデル名の変更
+サイドパネルのヘッダーにある設定アイコンから、以下を UI 上で変更可能：
 
-`src/lib/llm-client.ts` の `DEFAULT_MODEL` を編集：
-
-```typescript
-const DEFAULT_MODEL = 'your-model-name';
-```
-
-### APIエンドポイントの変更
-
-`src/lib/llm-client.ts` の `VLLM_BASE_URL` を編集：
-
-```typescript
-const VLLM_BASE_URL = 'http://your-server:port/v1';
-```
+- **サーバーURL**: vLLM API のエンドポイント（デフォルト: `http://localhost:8000/v1`）
+- **モデル**: vLLM サーバーから動的に取得し、ドロップダウンで選択
+- **Temperature / Max Tokens**: 生成パラメータの調整
 
 ## ディレクトリ構成
 
 ```
 briefer/
-├── src/
-│   ├── background/     # Service Worker
-│   ├── content/        # Content Script
-│   ├── sidepanel/      # Side Panel UI
-│   ├── lib/            # 共通ライブラリ
-│   ├── icons/          # アイコン
-│   └── manifest.json
-├── tests/              # テスト
-└── dist/               # ビルド成果物
+├── entrypoints/
+│   ├── background.ts       # Service Worker（Side Panel開閉 + コンテキストメニュー）
+│   └── sidepanel/          # Side Panel UI（React）
+│       ├── components/
+│       └── hooks/
+├── lib/                    # 共通ライブラリ（型定義、APIクライアント、設定管理等）
+├── public/                 # アイコン等の静的アセット
+├── tests/                  # テスト
+├── wxt.config.ts           # WXT設定（manifest定義）
+└── .output/chrome-mv3/     # ビルド成果物
 ```
 
 ## ライセンス

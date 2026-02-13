@@ -46,7 +46,8 @@ const mockChrome = {
 (globalThis as unknown as { chrome: typeof chrome }).chrome =
   mockChrome as unknown as typeof chrome;
 
-await import('../src/background/index');
+const { setupBackground } = await import('../entrypoints/background');
+setupBackground();
 
 const initialSetOptionsCall = mockChrome.sidePanel.setOptions.mock.calls[0];
 
@@ -69,7 +70,7 @@ describe('background service worker', () => {
 
       expect(mockChrome.sidePanel.setOptions).toHaveBeenCalledWith({
         tabId: 456,
-        path: 'sidepanel/index.html',
+        path: 'sidepanel.html',
         enabled: true,
       });
       expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 456 });
@@ -110,7 +111,7 @@ describe('background service worker', () => {
 
       expect(mockChrome.sidePanel.setOptions).toHaveBeenCalledWith({
         tabId: 789,
-        path: 'sidepanel/index.html',
+        path: 'sidepanel.html',
         enabled: true,
       });
       expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 789 });
