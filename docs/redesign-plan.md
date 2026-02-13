@@ -78,18 +78,24 @@ Service Worker 中継の廃止、Direct Fetch アーキテクチャへの移行�
 
 ### Phase 3: UX 強化
 
-PR #18 の UX 要素を Direct Fetch アーキテクチャ上に再実装。
+PR #18 の UX 要素を Direct Fetch アーキテクチャ上に再実装。6 PR に分割して段階的にマージする。
 
-| コンポーネント | 内容 |
-|-------------|------|
-| `PageContextBar` | ページタイトル + URL 表示（ローカルアイコン使用、プライバシー配慮） |
-| `ErrorMessage` | エラー分類（サーバー未到達/ページ不可/その他）と対処法表示 |
-| `Header` | 会話クリア「+」ボタン、接続ステータスドット（緑/黄/赤）、設定ポップオーバー |
-| `WelcomeMessage` | Quick Actions（「要約」「重要ポイント」「簡単に説明」） |
-| `InputContainer` | 送信不可理由の表示（placeholder 切替） |
-| 設定 | vLLM URL 変更 + `optional_host_permissions` による動的パーミッション |
-| コンテキストメニュー | テキスト選択 → 右クリック → 「Briefer で質問する」（READY ハンドシェイク方式） |
-| キーボードショートカット | Ctrl+Shift+B / Cmd+Shift+B でサイドパネル開閉 |
+```
+PR-1: 接続ステータスドット ──┬──▶ PR-2: PageContextBar + ErrorMessage
+                             ├──▶ PR-3: Quick Actions + placeholder
+                             └──▶ PR-4: 会話クリア + 設定ポップオーバー
+                                          └──▶ PR-5: 動的パーミッション
+PR-6: READY ハンドシェイク + キーボードショートカット（独立）
+```
+
+| PR | 作業 | 状態 | 内容 |
+|----|------|------|------|
+| PR-1 | 接続ステータスドット | | `useServerHealth` を 3 状態（`connected`/`checking`/`disconnected`）に拡張。Header に緑/黄/赤ドット表示 |
+| PR-2 | PageContextBar + ErrorMessage | | ページタイトル+URL 表示。エラー 3 分類（サーバー未到達/ページ不可/その他）と対処法 |
+| PR-3 | Quick Actions + placeholder | | WelcomeMessage に「要約」「重要ポイント」「簡単に説明」ボタン。InputContainer に送信不可理由表示 |
+| PR-4 | 会話クリア + 設定ポップオーバー | | Header に「+」ボタン + 歯車アイコン。インラインポップオーバーで serverUrl/temperature/maxTokens 変更 |
+| PR-5 | 動的パーミッション | | `optional_host_permissions` で localhost 以外のサーバーURL に対するホスト権限を動的要求 |
+| PR-6 | READY ハンドシェイク + ショートカット | | `PANEL_READY`/`PENDING_TEXT` メッセージングで選択テキスト確実注入。Ctrl+Shift+B でサイドパネル開く |
 
 ### Phase 4: 型安全・テスト強化
 
