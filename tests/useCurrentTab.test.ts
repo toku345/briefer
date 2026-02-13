@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  */
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockChromeTabs = {
@@ -29,7 +29,7 @@ describe('useCurrentTab', () => {
 
     const { result } = renderHook(() => useCurrentTab());
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.tabId).toBe(123);
     });
 
@@ -45,7 +45,7 @@ describe('useCurrentTab', () => {
 
     const { result } = renderHook(() => useCurrentTab());
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.error).toBe('タブが見つかりません');
     });
 
@@ -57,7 +57,7 @@ describe('useCurrentTab', () => {
 
     const { result } = renderHook(() => useCurrentTab());
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.error).toBe('タブが見つかりません');
     });
 
@@ -69,7 +69,7 @@ describe('useCurrentTab', () => {
 
     const { result } = renderHook(() => useCurrentTab());
 
-    await vi.waitFor(() => {
+    await waitFor(() => {
       expect(result.current.error).toBe('タブ情報の取得に失敗しました');
     });
 
