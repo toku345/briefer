@@ -27,10 +27,53 @@ body {
   background: #242424;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .header h1 {
   font-size: 16px;
   font-weight: 600;
   color: #fff;
+}
+
+/* Connection status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-connected {
+  background: #4caf50;
+}
+
+.status-checking {
+  background: #ff9800;
+  animation: pulse 1.5s infinite;
+}
+
+.status-disconnected {
+  background: #f44336;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .model-select {
