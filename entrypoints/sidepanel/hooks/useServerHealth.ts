@@ -12,14 +12,24 @@ export function useServerHealth() {
     let isMounted = true;
 
     async function check() {
+      let serverUrl: string;
       try {
-        const { serverUrl } = await getSettings();
+        ({ serverUrl } = await getSettings());
+      } catch (error) {
+        // Extension storage failure (e.g. context invalidated) is not a server issue
+        console.debug('[useServerHealth] Failed to read settings:', error);
+        if (isMounted) setStatus('disconnected');
+        return;
+      }
+
+      try {
         const response = await fetch(`${serverUrl}/models`, {
           signal: AbortSignal.timeout(5000),
         });
         if (isMounted) setStatus(response.ok ? 'connected' : 'disconnected');
-      } catch {
+      } catch (error) {
         if (isMounted) setStatus('disconnected');
+        console.debug('[useServerHealth] Health check failed:', error);
       }
     }
 
@@ -32,7 +42,5 @@ export function useServerHealth() {
     };
   }, []);
 
-  const isConnected = status === 'connected' ? true : status === 'disconnected' ? false : null;
-
-  return { isConnected, status };
+  return { status };
 }
