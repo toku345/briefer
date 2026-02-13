@@ -80,7 +80,7 @@ Service Worker 中継の廃止、Direct Fetch アーキテクチャへの移行�
 
 PR #18 の UX 要素を Direct Fetch アーキテクチャ上に再実装。6 PR に分割して段階的にマージする。
 
-```
+```text
 PR-1: 接続ステータスドット ──┬──▶ PR-2: PageContextBar + ErrorMessage
                              ├──▶ PR-3: Quick Actions + placeholder
                              └──▶ PR-4: 会話クリア + 設定ポップオーバー

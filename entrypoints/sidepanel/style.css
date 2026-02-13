@@ -76,6 +76,12 @@ body {
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .status-checking {
+    animation: none;
+  }
+}
+
 .model-select {
   padding: 4px 8px;
   border-radius: 4px;

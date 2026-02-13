@@ -14,7 +14,7 @@ vi.mock('@/lib/settings-store', () => ({
 }));
 
 const fetchSpy = vi.fn();
-globalThis.fetch = fetchSpy;
+vi.stubGlobal('fetch', fetchSpy);
 
 let useServerHealth: typeof import('../entrypoints/sidepanel/hooks/useServerHealth').useServerHealth;
 

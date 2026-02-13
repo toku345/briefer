@@ -28,7 +28,9 @@ export function Header() {
   return (
     <header className="header">
       <div className="header-left">
-        <output
+        {/* biome-ignore lint/a11y/useSemanticElements: <output>はフォーム計算結果用。ライブステータスにはspan+role="status"が適切 */}
+        <span
+          role="status"
           className={`status-dot status-${status}`}
           title={STATUS_LABELS[status]}
           aria-label={STATUS_LABELS[status]}
