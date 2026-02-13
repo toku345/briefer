@@ -45,8 +45,22 @@ body {
   color: #fff;
 }
 
+/* Visually hidden but accessible to screen readers */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* Connection status dot */
 .status-dot {
+  position: relative;
   width: 8px;
   height: 8px;
   border-radius: 50%;

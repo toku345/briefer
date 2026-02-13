@@ -39,8 +39,9 @@ export function Header() {
           role="status"
           className={`status-dot ${STATUS_CLASSES[status]}`}
           title={STATUS_LABELS[status]}
-          aria-label={STATUS_LABELS[status]}
-        />
+        >
+          <span className="visually-hidden">{STATUS_LABELS[status]}</span>
+        </span>
         <h1>Briefer</h1>
       </div>
       <div className="header-right">
