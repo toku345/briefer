@@ -28,7 +28,7 @@ export function Header() {
   return (
     <header className="header">
       <div className="header-left">
-        {/* biome-ignore lint/a11y/useSemanticElements: <output>はフォーム計算結果用。ライブステータスにはspan+role="status"が適切 */}
+        {/* biome-ignore lint/a11y/useSemanticElements: Biomeはrole="status"に対し<output>を推奨するが、<output>はフォーム計算結果用。接続ステータス表示にはspan+role="status"が意味的に適切 */}
         <span
           role="status"
           className={`status-dot status-${status}`}
