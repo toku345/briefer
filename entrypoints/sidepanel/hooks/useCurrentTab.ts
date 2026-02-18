@@ -45,7 +45,7 @@ export function useCurrentTab() {
 
     const onUpdated = (updatedTabId: number, changeInfo: chrome.tabs.OnUpdatedInfo) => {
       if (tabInfoRef.current && updatedTabId !== tabInfoRef.current.tabId) return;
-      if (changeInfo.title || changeInfo.url || changeInfo.status === 'complete') {
+      if ('title' in changeInfo || 'url' in changeInfo || changeInfo.status === 'complete') {
         updateTab();
       }
     };
