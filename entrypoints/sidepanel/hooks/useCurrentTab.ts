@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface TabInfo {
   tabId: number;
@@ -9,6 +9,7 @@ interface TabInfo {
 export function useCurrentTab() {
   const [tabInfo, setTabInfo] = useState<TabInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const tabInfoRef = useRef<TabInfo | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -19,11 +20,14 @@ export function useCurrentTab() {
         .then(([tab]) => {
           if (!isMounted) return;
           if (tab?.id) {
-            setTabInfo({
+            setError(null);
+            const info = {
               tabId: tab.id,
               title: tab.title ?? '',
               url: tab.url ?? '',
-            });
+            };
+            tabInfoRef.current = info;
+            setTabInfo(info);
           } else {
             setError('タブが見つかりません');
           }
@@ -39,7 +43,8 @@ export function useCurrentTab() {
 
     chrome.tabs.onActivated.addListener(updateTab);
 
-    const onUpdated = (_tabId: number, changeInfo: chrome.tabs.OnUpdatedInfo) => {
+    const onUpdated = (updatedTabId: number, changeInfo: chrome.tabs.OnUpdatedInfo) => {
+      if (tabInfoRef.current && updatedTabId !== tabInfoRef.current.tabId) return;
       if (changeInfo.title || changeInfo.url || changeInfo.status === 'complete') {
         updateTab();
       }
