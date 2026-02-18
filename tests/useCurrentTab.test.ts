@@ -237,6 +237,27 @@ describe('useCurrentTab', () => {
     expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
   });
 
+  it('onUpdated で title が空文字に変更された場合も再取得する', async () => {
+    mockChromeTabs.query.mockResolvedValueOnce([
+      { id: 1, title: 'Some Title', url: 'https://example.com' },
+    ]);
+
+    renderHook(() => useCurrentTab());
+
+    await waitFor(() => {
+      expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+    });
+
+    const onUpdatedCallback = mockOnUpdated.addListener.mock.calls[0][0];
+    mockChromeTabs.query.mockResolvedValueOnce([{ id: 1, title: '', url: 'https://example.com' }]);
+
+    await act(async () => {
+      onUpdatedCallback(1, { title: '' });
+    });
+
+    expect(mockChromeTabs.query).toHaveBeenCalledTimes(2);
+  });
+
   it('onUpdated で関係ない変更は無視する', async () => {
     mockChromeTabs.query.mockResolvedValueOnce([{ id: 1, title: 'Title' }]);
 
