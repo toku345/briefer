@@ -191,6 +191,52 @@ describe('useCurrentTab', () => {
     });
   });
 
+  it('エラー後にタブ取得成功するとエラーがクリアされる', async () => {
+    mockChromeTabs.query.mockResolvedValueOnce([]);
+
+    const { result } = renderHook(() => useCurrentTab());
+
+    await waitFor(() => {
+      expect(result.current.error).toBe('タブが見つかりません');
+    });
+
+    // onActivated でタブ切り替え → 成功
+    const onActivatedCallback = mockOnActivated.addListener.mock.calls[0][0];
+    mockChromeTabs.query.mockResolvedValueOnce([
+      { id: 1, title: 'Page', url: 'https://example.com' },
+    ]);
+
+    await act(async () => {
+      onActivatedCallback({ tabId: 1, windowId: 1 });
+    });
+
+    await waitFor(() => {
+      expect(result.current.tabId).toBe(1);
+      expect(result.current.error).toBeNull();
+    });
+  });
+
+  it('onUpdated でアクティブタブ以外の更新は無視する', async () => {
+    mockChromeTabs.query.mockResolvedValueOnce([
+      { id: 1, title: 'Active Tab', url: 'https://example.com' },
+    ]);
+
+    renderHook(() => useCurrentTab());
+
+    await waitFor(() => {
+      expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+    });
+
+    const onUpdatedCallback = mockOnUpdated.addListener.mock.calls[0][0];
+
+    // 別タブ(id=999)の title 変更 → 無視される
+    await act(async () => {
+      onUpdatedCallback(999, { title: 'Other Tab Updated' });
+    });
+
+    expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+  });
+
   it('onUpdated で関係ない変更は無視する', async () => {
     mockChromeTabs.query.mockResolvedValueOnce([{ id: 1, title: 'Title' }]);
 
