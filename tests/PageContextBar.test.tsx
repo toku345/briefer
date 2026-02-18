@@ -9,21 +9,21 @@ describe('PageContextBar', () => {
   it('title と hostname が表示される', () => {
     render(<PageContextBar title="Example Page" url="https://example.com/path" />);
 
-    screen.getByText('Example Page');
-    screen.getByText('example.com');
+    expect(screen.getByText('Example Page')).toBeDefined();
+    expect(screen.getByText('example.com')).toBeDefined();
   });
 
   it('title が null の場合は「(無題)」が表示される', () => {
     render(<PageContextBar title={null} url="https://example.com" />);
 
-    screen.getByText('(無題)');
-    screen.getByText('example.com');
+    expect(screen.getByText('(無題)')).toBeDefined();
+    expect(screen.getByText('example.com')).toBeDefined();
   });
 
   it('url が null の場合はホスト名が表示されない', () => {
     render(<PageContextBar title="Test" url={null} />);
 
-    screen.getByText('Test');
+    expect(screen.getByText('Test')).toBeDefined();
     expect(screen.queryByText('example.com')).toBeNull();
   });
 
@@ -36,11 +36,10 @@ describe('PageContextBar', () => {
   it('不正な URL の場合はホスト名が表示されない', () => {
     render(<PageContextBar title="Test" url="not-a-url" />);
 
-    screen.getByText('Test');
+    expect(screen.getByText('Test')).toBeDefined();
     // ホスト名要素が存在しないことを確認
-    const bar = screen.getByText('Test').parentElement;
-    const urlSpan = bar?.querySelector('.page-context-url');
-    expect(urlSpan).toBeNull();
+    const bar = screen.getByText('Test').closest('.page-context-bar');
+    expect(bar?.querySelector('.page-context-url')).toBeNull();
   });
 
   it('title 属性にフルタイトルが設定される', () => {
