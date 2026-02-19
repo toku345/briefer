@@ -258,6 +258,29 @@ describe('useCurrentTab', () => {
     expect(mockChromeTabs.query).toHaveBeenCalledTimes(2);
   });
 
+  it('onUpdated で status が complete の場合に再取得する', async () => {
+    mockChromeTabs.query.mockResolvedValueOnce([
+      { id: 1, title: 'Old Title', url: 'https://example.com' },
+    ]);
+
+    renderHook(() => useCurrentTab());
+
+    await waitFor(() => {
+      expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+    });
+
+    const onUpdatedCallback = mockOnUpdated.addListener.mock.calls[0][0];
+    mockChromeTabs.query.mockResolvedValueOnce([
+      { id: 1, title: 'New Title', url: 'https://example.com/new' },
+    ]);
+
+    await act(async () => {
+      onUpdatedCallback(1, { status: 'complete' });
+    });
+
+    expect(mockChromeTabs.query).toHaveBeenCalledTimes(2);
+  });
+
   it('onUpdated で関係ない変更は無視する', async () => {
     mockChromeTabs.query.mockResolvedValueOnce([{ id: 1, title: 'Title' }]);
 
