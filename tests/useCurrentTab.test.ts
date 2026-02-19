@@ -31,7 +31,7 @@ describe('useCurrentTab', () => {
   });
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   it('初回マウント時に現在のタブIDを取得する', async () => {
