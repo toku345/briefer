@@ -1,4 +1,5 @@
 import { classifyError } from '@/lib/error-classifier';
+import { getPlaceholder } from '@/lib/get-placeholder';
 import { ChatContainer } from './components/ChatContainer';
 import { Header } from './components/Header';
 import { InputContainer } from './components/InputContainer';
@@ -7,10 +8,13 @@ import { useChatHistory } from './hooks/useChatHistory';
 import { useChatStream } from './hooks/useChatStream';
 import { useCurrentTab } from './hooks/useCurrentTab';
 import { usePageContent } from './hooks/usePageContent';
+import { useServerHealth } from './hooks/useServerHealth';
 
 export function App() {
+  const { status: serverStatus } = useServerHealth();
   const { tabId, title: tabTitle, url: tabUrl, error: tabError } = useCurrentTab();
-  const { data: pageContent, error: contentError } = usePageContent(tabId);
+  const { data: rawPageContent, error: contentError } = usePageContent(tabId);
+  const pageContent = rawPageContent ?? null;
   const { data: chatState } = useChatHistory(tabId);
   const {
     sendMessage,
@@ -19,11 +23,12 @@ export function App() {
     isStreaming,
     error: streamError,
     clearError,
-  } = useChatStream(tabId, pageContent ?? null);
+  } = useChatStream(tabId, pageContent);
 
   const messages = chatState?.messages ?? [];
   const error = classifyError(tabError, contentError ?? null, streamError);
-  const isReady = !!tabId && !!pageContent;
+  const isReady = !!tabId && !!pageContent && serverStatus === 'connected';
+  const placeholder = getPlaceholder(tabId, pageContent, error);
 
   const handleSend = (content: string) => {
     if (!isReady || isStreaming) return;
@@ -40,13 +45,15 @@ export function App() {
         streamingContent={streamingContent}
         isStreaming={isStreaming}
         error={error}
+        onAction={handleSend}
+        actionDisabled={!isReady || isStreaming}
       />
       <InputContainer
         onSend={handleSend}
         onCancel={cancel}
         isStreaming={isStreaming}
         disabled={!isReady || isStreaming}
-        defaultValue={messages.length === 0 ? 'このページを要約して' : ''}
+        placeholder={placeholder}
       />
     </div>
   );

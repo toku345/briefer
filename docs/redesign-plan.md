@@ -91,8 +91,8 @@ PR-6: READY ハンドシェイク + キーボードショートカット（独�
 | PR | 作業 | 状態 | 内容 |
 |----|------|------|------|
 | PR-1 (#21) | 接続ステータスドット | ✅ | `useServerHealth` を 3 状態（`connected`/`checking`/`disconnected`）に拡張。Header に緑/黄/赤ドット表示 |
-| PR-2 (#22) | PageContextBar + ErrorMessage | 🔄 レビュー中 | ページタイトル+URL 表示。エラー 3 分類（サーバー未到達/ページ不可/その他）と対処法。`useCurrentTab` を title/url 追跡に拡張 |
-| PR-3 | Quick Actions + placeholder | | WelcomeMessage に「要約」「重要ポイント」「簡単に説明」ボタン。InputContainer に送信不可理由表示 |
+| PR-2 (#22) | PageContextBar + ErrorMessage | ✅ | ページタイトル+URL 表示。エラー 3 分類（サーバー未到達/ページ不可/その他）と対処法。`useCurrentTab` を title/url 追跡に拡張 |
+| PR-3 (#25) | Quick Actions + placeholder | 🔄 レビュー中 | WelcomeMessage に「要約」「重要ポイント」「簡単に説明」ボタン。InputContainer に送信不可理由表示。`getPlaceholder` で 5 状態判定 |
 | PR-4 | 会話クリア + 設定ポップオーバー | | Header に「+」ボタン + 歯車アイコン。インラインポップオーバーで serverUrl/temperature/maxTokens 変更 |
 | PR-5 | 動的パーミッション | | `optional_host_permissions` で localhost 以外のサーバーURL に対するホスト権限を動的要求 |
 | PR-6 | READY ハンドシェイク + ショートカット | | `PANEL_READY`/`PENDING_TEXT` メッセージングで選択テキスト確実注入。Ctrl+Shift+B でサイドパネル開く |
