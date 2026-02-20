@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getPlaceholder } from '../entrypoints/sidepanel/App';
+import { getPlaceholder } from '../lib/get-placeholder';
 import type { AppError } from '../lib/types';
 
 describe('getPlaceholder', () => {
