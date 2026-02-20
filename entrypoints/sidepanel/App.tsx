@@ -57,7 +57,7 @@ export function App() {
         isStreaming={isStreaming}
         error={error}
         onAction={handleSend}
-        actionDisabled={!isReady}
+        actionDisabled={!isReady || isStreaming}
       />
       <InputContainer
         onSend={handleSend}
