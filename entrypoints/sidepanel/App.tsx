@@ -16,6 +16,7 @@ export function getPlaceholder(
 ): string {
   if (error?.category === 'server-unreachable') return 'サーバーに接続できません';
   if (error?.category === 'page-unavailable') return 'このページでは使用できません';
+  if (error) return 'エラーが発生しています';
   if (!tabId) return 'タブ情報を取得中...';
   if (!pageContent) return 'ページを読み込み中...';
   return 'メッセージを入力...';
@@ -23,7 +24,8 @@ export function getPlaceholder(
 
 export function App() {
   const { tabId, title: tabTitle, url: tabUrl, error: tabError } = useCurrentTab();
-  const { data: pageContent, error: contentError } = usePageContent(tabId);
+  const { data: rawPageContent, error: contentError } = usePageContent(tabId);
+  const pageContent = rawPageContent ?? null;
   const { data: chatState } = useChatHistory(tabId);
   const {
     sendMessage,
@@ -32,12 +34,12 @@ export function App() {
     isStreaming,
     error: streamError,
     clearError,
-  } = useChatStream(tabId, pageContent ?? null);
+  } = useChatStream(tabId, pageContent);
 
   const messages = chatState?.messages ?? [];
   const error = classifyError(tabError, contentError ?? null, streamError);
   const isReady = !!tabId && !!pageContent;
-  const placeholder = getPlaceholder(tabId, pageContent ?? null, error);
+  const placeholder = getPlaceholder(tabId, pageContent, error);
 
   const handleSend = (content: string) => {
     if (!isReady || isStreaming) return;
