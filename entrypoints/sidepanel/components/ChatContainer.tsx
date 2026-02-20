@@ -10,6 +10,8 @@ interface ChatContainerProps {
   streamingContent: string;
   isStreaming: boolean;
   error: AppError | null;
+  onAction: (message: string) => void;
+  actionDisabled: boolean;
 }
 
 export function ChatContainer({
@@ -17,6 +19,8 @@ export function ChatContainer({
   streamingContent,
   isStreaming,
   error,
+  onAction,
+  actionDisabled,
 }: ChatContainerProps) {
   const containerRef = useRef<HTMLElement>(null);
 
@@ -32,7 +36,7 @@ export function ChatContainer({
 
   return (
     <main className="chat-container" ref={containerRef}>
-      {showWelcome && <WelcomeMessage />}
+      {showWelcome && <WelcomeMessage onAction={onAction} disabled={actionDisabled} />}
       <MessageList messages={messages} />
       {isStreaming && <StreamingMessage content={streamingContent} />}
       {error && <ErrorMessage error={error} />}

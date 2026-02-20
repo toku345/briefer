@@ -5,7 +5,7 @@ interface InputContainerProps {
   onCancel: () => void;
   isStreaming: boolean;
   disabled: boolean;
-  defaultValue?: string;
+  placeholder: string;
 }
 
 export function InputContainer({
@@ -13,9 +13,9 @@ export function InputContainer({
   onCancel,
   isStreaming,
   disabled,
-  defaultValue = '',
+  placeholder,
 }: InputContainerProps) {
-  const [value, setValue] = useState(defaultValue);
+  const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSend = useCallback(() => {
@@ -57,7 +57,7 @@ export function InputContainer({
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
         onInput={handleInput}
-        placeholder="メッセージを入力..."
+        placeholder={placeholder}
         rows={1}
       />
       {isStreaming ? (
