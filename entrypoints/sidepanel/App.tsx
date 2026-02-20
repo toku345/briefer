@@ -8,8 +8,10 @@ import { useChatHistory } from './hooks/useChatHistory';
 import { useChatStream } from './hooks/useChatStream';
 import { useCurrentTab } from './hooks/useCurrentTab';
 import { usePageContent } from './hooks/usePageContent';
+import { useServerHealth } from './hooks/useServerHealth';
 
 export function App() {
+  const { status: serverStatus } = useServerHealth();
   const { tabId, title: tabTitle, url: tabUrl, error: tabError } = useCurrentTab();
   const { data: rawPageContent, error: contentError } = usePageContent(tabId);
   const pageContent = rawPageContent ?? null;
@@ -25,7 +27,7 @@ export function App() {
 
   const messages = chatState?.messages ?? [];
   const error = classifyError(tabError, contentError ?? null, streamError);
-  const isReady = !!tabId && !!pageContent;
+  const isReady = !!tabId && !!pageContent && serverStatus === 'connected';
   const placeholder = getPlaceholder(tabId, pageContent, error);
 
   const handleSend = (content: string) => {
