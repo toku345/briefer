@@ -47,3 +47,11 @@ export const DEFAULT_SETTINGS: Settings = {
   temperature: 0.3,
   maxTokens: 2048,
 };
+
+export type ErrorCategory = 'server-unreachable' | 'page-unavailable' | 'general';
+
+export interface AppError {
+  category: ErrorCategory;
+  message: string;
+  guidance: string;
+}

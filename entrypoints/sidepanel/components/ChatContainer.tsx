@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import type { ChatMessage } from '@/lib/types';
+import type { AppError, ChatMessage } from '@/lib/types';
+import { ErrorMessage } from './ErrorMessage';
 import { MessageList } from './MessageList';
 import { StreamingMessage } from './StreamingMessage';
 import { WelcomeMessage } from './WelcomeMessage';
@@ -8,7 +9,7 @@ interface ChatContainerProps {
   messages: ChatMessage[];
   streamingContent: string;
   isStreaming: boolean;
-  error: string | null;
+  error: AppError | null;
 }
 
 export function ChatContainer({
@@ -34,7 +35,7 @@ export function ChatContainer({
       {showWelcome && <WelcomeMessage />}
       <MessageList messages={messages} />
       {isStreaming && <StreamingMessage content={streamingContent} />}
-      {error && <div className="message error">{error}</div>}
+      {error && <ErrorMessage error={error} />}
     </main>
   );
 }

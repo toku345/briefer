@@ -1,13 +1,15 @@
+import { classifyError } from '@/lib/error-classifier';
 import { ChatContainer } from './components/ChatContainer';
 import { Header } from './components/Header';
 import { InputContainer } from './components/InputContainer';
+import { PageContextBar } from './components/PageContextBar';
 import { useChatHistory } from './hooks/useChatHistory';
 import { useChatStream } from './hooks/useChatStream';
 import { useCurrentTab } from './hooks/useCurrentTab';
 import { usePageContent } from './hooks/usePageContent';
 
 export function App() {
-  const { tabId, error: tabError } = useCurrentTab();
+  const { tabId, title: tabTitle, url: tabUrl, error: tabError } = useCurrentTab();
   const { data: pageContent, error: contentError } = usePageContent(tabId);
   const { data: chatState } = useChatHistory(tabId);
   const {
@@ -20,7 +22,7 @@ export function App() {
   } = useChatStream(tabId, pageContent ?? null);
 
   const messages = chatState?.messages ?? [];
-  const error = tabError ?? contentError?.message ?? streamError;
+  const error = classifyError(tabError, contentError ?? null, streamError);
   const isReady = !!tabId && !!pageContent;
 
   const handleSend = (content: string) => {
@@ -32,6 +34,7 @@ export function App() {
   return (
     <div className="container">
       <Header />
+      <PageContextBar title={tabTitle} url={tabUrl} />
       <ChatContainer
         messages={messages}
         streamingContent={streamingContent}
