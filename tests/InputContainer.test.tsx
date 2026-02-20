@@ -32,6 +32,24 @@ describe('InputContainer', () => {
     expect(screen.getByPlaceholderText('メッセージを入力...')).toBeDefined();
   });
 
+  it('初期状態でtextareaのvalueが空である', () => {
+    render(<InputContainer {...defaultProps} />);
+
+    const textarea = screen.getByPlaceholderText('メッセージを入力...') as HTMLTextAreaElement;
+    expect(textarea.value).toBe('');
+  });
+
+  it('送信後にtextareaがクリアされる', () => {
+    const onSend = vi.fn();
+    render(<InputContainer {...defaultProps} onSend={onSend} />);
+
+    const textarea = screen.getByPlaceholderText('メッセージを入力...') as HTMLTextAreaElement;
+    fireEvent.change(textarea, { target: { value: 'テスト' } });
+    fireEvent.click(screen.getByText('送信'));
+
+    expect(textarea.value).toBe('');
+  });
+
   it('送信ボタンクリックでonSendが呼ばれる', () => {
     const onSend = vi.fn();
     render(<InputContainer {...defaultProps} onSend={onSend} />);

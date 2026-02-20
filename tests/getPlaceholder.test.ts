@@ -29,6 +29,25 @@ describe('getPlaceholder', () => {
     expect(getPlaceholder(1, null, pageError)).toBe('このページでは使用できません');
   });
 
+  it('generalエラー時', () => {
+    const generalError: AppError = {
+      category: 'general',
+      message: 'Something went wrong',
+      guidance: '再試行してください。',
+    };
+    expect(
+      getPlaceholder(
+        1,
+        { title: 'Test', content: 'text', url: 'https://example.com' },
+        generalError,
+      ),
+    ).toBe('エラーが発生しています');
+  });
+
+  it('tabIdがnullでもエラーが優先される', () => {
+    expect(getPlaceholder(null, null, serverError)).toBe('サーバーに接続できません');
+  });
+
   it('tabIdがnullのとき', () => {
     expect(getPlaceholder(null, null, null)).toBe('タブ情報を取得中...');
   });
