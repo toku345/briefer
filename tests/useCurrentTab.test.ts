@@ -221,10 +221,10 @@ describe('useCurrentTab', () => {
       { id: 1, title: 'Active Tab', url: 'https://example.com' },
     ]);
 
-    renderHook(() => useCurrentTab());
+    const { result } = renderHook(() => useCurrentTab());
 
     await waitFor(() => {
-      expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+      expect(result.current.tabId).toBe(1);
     });
 
     const onUpdatedCallback = mockOnUpdated.addListener.mock.calls[0][0];
@@ -242,10 +242,10 @@ describe('useCurrentTab', () => {
       { id: 1, title: 'Some Title', url: 'https://example.com' },
     ]);
 
-    renderHook(() => useCurrentTab());
+    const { result } = renderHook(() => useCurrentTab());
 
     await waitFor(() => {
-      expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+      expect(result.current.tabId).toBe(1);
     });
 
     const onUpdatedCallback = mockOnUpdated.addListener.mock.calls[0][0];
@@ -263,10 +263,10 @@ describe('useCurrentTab', () => {
       { id: 1, title: 'Old Title', url: 'https://example.com' },
     ]);
 
-    renderHook(() => useCurrentTab());
+    const { result } = renderHook(() => useCurrentTab());
 
     await waitFor(() => {
-      expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+      expect(result.current.tabId).toBe(1);
     });
 
     const onUpdatedCallback = mockOnUpdated.addListener.mock.calls[0][0];
@@ -284,10 +284,10 @@ describe('useCurrentTab', () => {
   it('onUpdated で関係ない変更は無視する', async () => {
     mockChromeTabs.query.mockResolvedValueOnce([{ id: 1, title: 'Title' }]);
 
-    renderHook(() => useCurrentTab());
+    const { result } = renderHook(() => useCurrentTab());
 
     await waitFor(() => {
-      expect(mockChromeTabs.query).toHaveBeenCalledTimes(1);
+      expect(result.current.tabId).toBe(1);
     });
 
     const onUpdatedCallback = mockOnUpdated.addListener.mock.calls[0][0];
