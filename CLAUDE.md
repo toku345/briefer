@@ -65,6 +65,7 @@ Side Panel から vLLM API へ直接 fetch する構成。Service Worker はリ�
 | `lib/extractor.ts` | ページコンテンツ抽出（article > main > role="main" > body） |
 | `lib/llm-client.ts` | vLLM APIクライアント（ストリーミング対応、Side Panelから直接呼び出し） |
 | `lib/settings-store.ts` | 設定管理（サーバーURL、temperature、max_tokens） |
+| `lib/get-placeholder.ts` | InputContainerの動的placeholder算出（エラー/ローディング/正常の5状態判定） |
 | `entrypoints/background.ts` | Service Worker（Side Panel開閉 + コンテキストメニュー） |
 | `entrypoints/sidepanel/index.tsx` | Side Panel エントリーポイント |
 | `entrypoints/sidepanel/hooks/useChatStream.ts` | 統合ストリーミングhook（AbortController管理含む） |
