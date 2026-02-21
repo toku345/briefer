@@ -37,5 +37,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add biome.json
+          # biome migrate が想定外のファイルを変更した場合は即座に停止
+          if ! git diff --quiet; then
+            echo "::error::biome migrate modified files beyond biome.json"
+            git diff --name-only
+            exit 1
+          fi
           git commit -m "chore: migrate biome schema version"
           git push
