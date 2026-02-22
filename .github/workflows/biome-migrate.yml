@@ -1,0 +1,47 @@
+name: Biome Migrate
+
+on:
+  pull_request_target:
+    branches: [main]
+
+permissions: {}
+
+jobs:
+  migrate:
+    if: >-
+      github.actor == 'dependabot[bot]' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      contains(github.event.pull_request.title, 'biome')
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: oven-sh/setup-bun@3d267786b128fe76c2f16a390aa2448b815359f3 # v2.1.2
+        with:
+          bun-version-file: ".tool-versions"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run biome migrate
+        run: bunx biome migrate --write
+
+      - name: Commit changes if any
+        run: |
+          git diff --quiet && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add biome.json
+          # biome migrate が想定外のファイルを変更した場合は即座に停止
+          if ! git diff --quiet; then
+            echo "::error::biome migrate modified files beyond biome.json"
+            git diff --name-only
+            exit 1
+          fi
+          git commit -m "chore: migrate biome schema version"
+          git push
