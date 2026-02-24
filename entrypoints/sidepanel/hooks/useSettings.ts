@@ -7,7 +7,11 @@ export function useSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
-    getSettings().then(setSettings);
+    getSettings()
+      .then(setSettings)
+      .catch((err) => {
+        console.error('[useSettings] Failed to load settings:', err);
+      });
   }, []);
 
   const updateSetting = useCallback(
