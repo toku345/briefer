@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useModels } from '../hooks/useModels';
 import { useSelectedModel } from '../hooks/useSelectedModel';
 import { type ConnectionStatus, useServerHealth } from '../hooks/useServerHealth';
@@ -26,6 +26,8 @@ export function Header({ onClearChat, hasMessages }: HeaderProps) {
   const { model, selectModel } = useSelectedModel();
   const { status } = useServerHealth();
   const [showSettings, setShowSettings] = useState(false);
+  const gearBtnRef = useRef<HTMLButtonElement>(null);
+  const handleCloseSettings = useCallback(() => setShowSettings(false), []);
 
   // 設定が未保存でモデルリストがある場合、最初のモデルを自動選択
   useEffect(() => {
@@ -79,6 +81,7 @@ export function Header({ onClearChat, hasMessages }: HeaderProps) {
         )}
         <div className="settings-wrapper">
           <button
+            ref={gearBtnRef}
             type="button"
             className="header-btn"
             onClick={() => setShowSettings((prev) => !prev)}
@@ -87,7 +90,9 @@ export function Header({ onClearChat, hasMessages }: HeaderProps) {
           >
             <GearIcon />
           </button>
-          {showSettings && <SettingsPopover onClose={() => setShowSettings(false)} />}
+          {showSettings && (
+            <SettingsPopover onClose={handleCloseSettings} excludeRef={gearBtnRef} />
+          )}
         </div>
       </div>
     </header>

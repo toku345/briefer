@@ -1,11 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { type RefObject, useEffect, useRef, useState } from 'react';
 import { useSettings } from '../hooks/useSettings';
 
 interface SettingsPopoverProps {
   onClose: () => void;
+  excludeRef?: RefObject<HTMLElement | null>;
 }
 
-export function SettingsPopover({ onClose }: SettingsPopoverProps) {
+export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
   const { settings, updateSetting } = useSettings();
   const [serverUrl, setServerUrl] = useState(settings.serverUrl);
   const [temperature, setTemperature] = useState(String(settings.temperature));
@@ -21,7 +22,12 @@ export function SettingsPopover({ onClose }: SettingsPopoverProps) {
 
   useEffect(() => {
     const handleMouseDown = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(target) &&
+        !excludeRef?.current?.contains(target)
+      ) {
         onClose();
       }
     };
@@ -34,7 +40,7 @@ export function SettingsPopover({ onClose }: SettingsPopoverProps) {
       document.removeEventListener('mousedown', handleMouseDown);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [onClose]);
+  }, [onClose, excludeRef]);
 
   const handleServerUrlBlur = () => {
     if (serverUrl !== settings.serverUrl) {
