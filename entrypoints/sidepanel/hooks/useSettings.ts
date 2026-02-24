@@ -16,8 +16,12 @@ export function useSettings() {
 
   const updateSetting = useCallback(
     async <K extends keyof Settings>(key: K, value: Settings[K]) => {
-      const updated = await saveSettings({ [key]: value });
-      setSettings(updated);
+      try {
+        const updated = await saveSettings({ [key]: value });
+        setSettings(updated);
+      } catch (err) {
+        console.error(`[useSettings] Failed to save setting "${key}":`, err);
+      }
     },
     [],
   );
