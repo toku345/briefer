@@ -1,6 +1,11 @@
 import { type RefObject, useEffect, useRef, useState } from 'react';
 import { useSettings } from '../hooks/useSettings';
 
+function flashError(el: HTMLElement) {
+  el.classList.remove('settings-input-error');
+  requestAnimationFrame(() => el.classList.add('settings-input-error'));
+}
+
 interface SettingsPopoverProps {
   onClose: () => void;
   excludeRef?: RefObject<HTMLElement | null>;
@@ -42,30 +47,33 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
     };
   }, [onClose, excludeRef]);
 
-  const handleServerUrlBlur = () => {
+  const handleServerUrlBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const trimmed = serverUrl.trim();
     if (trimmed && trimmed !== settings.serverUrl) {
       updateSetting('serverUrl', trimmed);
     } else {
       setServerUrl(settings.serverUrl);
+      flashError(e.currentTarget);
     }
   };
 
-  const handleTemperatureBlur = () => {
+  const handleTemperatureBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const value = Number.parseFloat(temperature);
     if (!Number.isNaN(value) && value >= 0 && value <= 2 && value !== settings.temperature) {
       updateSetting('temperature', value);
     } else {
       setTemperature(String(settings.temperature));
+      flashError(e.currentTarget);
     }
   };
 
-  const handleMaxTokensBlur = () => {
+  const handleMaxTokensBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const value = Number.parseInt(maxTokens, 10);
     if (!Number.isNaN(value) && value >= 1 && value !== settings.maxTokens) {
       updateSetting('maxTokens', value);
     } else {
       setMaxTokens(String(settings.maxTokens));
+      flashError(e.currentTarget);
     }
   };
 

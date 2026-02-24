@@ -491,6 +491,19 @@ body {
   border-color: #0066cc;
 }
 
+.settings-popover input.settings-input-error {
+  animation: input-error-flash 0.4s ease;
+}
+
+@keyframes input-error-flash {
+  from {
+    border-color: #f44336;
+  }
+  to {
+    border-color: #444;
+  }
+}
+
 .error-fallback {
   padding: 20px;
   text-align: center;
