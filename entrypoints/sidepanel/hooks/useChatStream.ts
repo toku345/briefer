@@ -115,7 +115,17 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
     abortRef.current?.abort();
   }, []);
 
+  const clearChat = useCallback(async () => {
+    if (!tabId) return;
+    abortRef.current?.abort();
+    await chrome.storage.session.remove(`${STORAGE_PREFIX}${tabId}`);
+    queryClient.setQueryData<ChatState>(['chat', tabId], { messages: [], pageContent: null });
+    setError(null);
+    setStreamingContent('');
+    setIsStreaming(false);
+  }, [tabId, queryClient]);
+
   const clearError = useCallback(() => setError(null), []);
 
-  return { sendMessage, cancel, streamingContent, isStreaming, error, clearError };
+  return { sendMessage, cancel, clearChat, streamingContent, isStreaming, error, clearError };
 }
