@@ -43,8 +43,11 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
   }, [onClose, excludeRef]);
 
   const handleServerUrlBlur = () => {
-    if (serverUrl !== settings.serverUrl) {
-      updateSetting('serverUrl', serverUrl);
+    const trimmed = serverUrl.trim();
+    if (trimmed && trimmed !== settings.serverUrl) {
+      updateSetting('serverUrl', trimmed);
+    } else {
+      setServerUrl(settings.serverUrl);
     }
   };
 
