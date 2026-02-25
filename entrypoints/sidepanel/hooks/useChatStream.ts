@@ -82,7 +82,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
           setStreamingContent((prev) => prev + remaining);
         }
 
-        if (fullResponse && !hasError) {
+        if (fullResponse && !hasError && !controller.signal.aborted) {
           const assistantMessage: ChatMessage = {
             role: 'assistant',
             content: fullResponse,
