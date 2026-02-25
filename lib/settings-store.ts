@@ -3,7 +3,9 @@ import { DEFAULT_SETTINGS, SETTINGS_KEY, type Settings } from './types';
 /** storage の破損や不正値を防ぐため、read/write 両方で適用 */
 function sanitizeSettings(settings: Settings): Settings {
   return {
-    serverUrl: settings.serverUrl || DEFAULT_SETTINGS.serverUrl,
+    serverUrl:
+      (typeof settings.serverUrl === 'string' ? settings.serverUrl.trim() : '') ||
+      DEFAULT_SETTINGS.serverUrl,
     selectedModel: settings.selectedModel,
     temperature: Number.isFinite(settings.temperature)
       ? Math.max(0, Math.min(2, settings.temperature))
