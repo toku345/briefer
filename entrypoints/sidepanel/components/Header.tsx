@@ -73,8 +73,8 @@ export function Header({ onClearChat, hasMessages }: HeaderProps) {
             type="button"
             className="header-btn"
             onClick={onClearChat}
-            title="会話をクリア"
-            aria-label="会話をクリア"
+            title="新しい会話"
+            aria-label="新しい会話"
           >
             <PlusIcon />
           </button>

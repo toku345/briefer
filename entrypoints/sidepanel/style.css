@@ -94,6 +94,11 @@ body {
   .status-checking {
     animation: none;
   }
+
+  .settings-popover input.settings-input-error {
+    animation: none;
+    border-color: #f44336;
+  }
 }
 
 .model-select {
