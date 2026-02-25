@@ -89,6 +89,17 @@ describe('SettingsPopover validation', () => {
 
       expect(mockUpdateSetting).toHaveBeenCalledWith('temperature', 2);
     });
+
+    it('現在値と同値を入力した場合、updateSetting も flashError も呼ばれない', () => {
+      render(<SettingsPopover onClose={vi.fn()} />);
+      const input = screen.getByLabelText(/Temperature/) as HTMLInputElement;
+
+      fireEvent.change(input, { target: { value: '0.3' } });
+      fireEvent.blur(input);
+
+      expect(mockUpdateSetting).not.toHaveBeenCalled();
+      expect(input.classList.contains('settings-input-error')).toBe(false);
+    });
   });
 
   describe('maxTokens', () => {
@@ -133,6 +144,17 @@ describe('SettingsPopover validation', () => {
 
       expect(mockUpdateSetting).toHaveBeenCalledWith('maxTokens', 1);
     });
+
+    it('現在値と同値を入力した場合、updateSetting も flashError も呼ばれない', () => {
+      render(<SettingsPopover onClose={vi.fn()} />);
+      const input = screen.getByLabelText(/Max Tokens/) as HTMLInputElement;
+
+      fireEvent.change(input, { target: { value: '2048' } });
+      fireEvent.blur(input);
+
+      expect(mockUpdateSetting).not.toHaveBeenCalled();
+      expect(input.classList.contains('settings-input-error')).toBe(false);
+    });
   });
 
   describe('serverUrl', () => {
@@ -176,6 +198,17 @@ describe('SettingsPopover validation', () => {
       fireEvent.blur(input);
 
       expect(mockUpdateSetting).toHaveBeenCalledWith('serverUrl', 'http://custom:9000/v1');
+    });
+
+    it('現在値と同値を入力した場合、updateSetting も flashError も呼ばれない', () => {
+      render(<SettingsPopover onClose={vi.fn()} />);
+      const input = screen.getByLabelText(/Server URL/) as HTMLInputElement;
+
+      fireEvent.change(input, { target: { value: 'http://localhost:8000/v1' } });
+      fireEvent.blur(input);
+
+      expect(mockUpdateSetting).not.toHaveBeenCalled();
+      expect(input.classList.contains('settings-input-error')).toBe(false);
     });
   });
 });

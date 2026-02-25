@@ -26,7 +26,7 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
   }, [settings.serverUrl, settings.temperature, settings.maxTokens]);
 
   useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
+    const handleOutsideClick = (e: MouseEvent) => {
       const target = e.target as Node;
       if (
         popoverRef.current &&
@@ -39,42 +39,43 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('click', handleOutsideClick);
     document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('click', handleOutsideClick);
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [onClose, excludeRef]);
 
   const handleServerUrlBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const trimmed = serverUrl.trim();
-    if (trimmed && trimmed !== settings.serverUrl) {
-      updateSetting('serverUrl', trimmed);
-    } else {
+    if (!trimmed) {
       setServerUrl(settings.serverUrl);
       flashError(e.currentTarget);
+      return;
     }
+    if (trimmed !== settings.serverUrl) updateSetting('serverUrl', trimmed);
+    else setServerUrl(settings.serverUrl);
   };
 
   const handleTemperatureBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const value = Number.parseFloat(temperature);
-    if (!Number.isNaN(value) && value >= 0 && value <= 2 && value !== settings.temperature) {
-      updateSetting('temperature', value);
-    } else {
+    if (Number.isNaN(value) || value < 0 || value > 2) {
       setTemperature(String(settings.temperature));
       flashError(e.currentTarget);
+      return;
     }
+    if (value !== settings.temperature) updateSetting('temperature', value);
   };
 
   const handleMaxTokensBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const value = Number.parseInt(maxTokens, 10);
-    if (!Number.isNaN(value) && value >= 1 && value !== settings.maxTokens) {
-      updateSetting('maxTokens', value);
-    } else {
+    const value = Number(maxTokens);
+    if (!Number.isInteger(value) || value < 1) {
       setMaxTokens(String(settings.maxTokens));
       flashError(e.currentTarget);
+      return;
     }
+    if (value !== settings.maxTokens) updateSetting('maxTokens', value);
   };
 
   return (
