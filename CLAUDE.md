@@ -71,8 +71,28 @@ Side Panel から vLLM API へ直接 fetch する構成。Service Worker はリ�
 | `entrypoints/sidepanel/hooks/useChatStream.ts` | 統合ストリーミングhook（AbortController管理含む） |
 | `entrypoints/sidepanel/hooks/usePageContent.ts` | executeScriptによるページコンテンツ取得 |
 | `entrypoints/sidepanel/hooks/useServerHealth.ts` | vLLMサーバーのヘルスチェック |
+| `entrypoints/sidepanel/hooks/useSettings.ts` | 設定の読み込み・部分更新（型安全なジェネリクス） |
+| `entrypoints/sidepanel/components/SettingsPopover.tsx` | 設定UI（blur時バリデーション+リバート） |
 | `wxt.config.ts` | WXT設定（manifest定義、React module） |
 
 ## LLM設定
 
 `lib/settings-store.ts` で管理。サーバーURL（デフォルト: `http://localhost:8000/v1`）、temperature、max_tokens を UI から設定可能。モデルは vLLM サーバーから動的に取得し、UI 上で選択可能。
+
+## テストパターン
+
+- テスト環境: Vitest + @testing-library/react + jsdom
+- コンポーネントテストファイル先頭に `// @vitest-environment jsdom` を記載
+- Chrome API モック: `(globalThis as unknown as { chrome: typeof chrome }).chrome = mockChrome as unknown as typeof chrome` パターン
+- storage.onChanged リスナーテスト: リスナー配列を管理し手動発火でシミュレート
+- タイマーテスト: `vi.useFakeTimers({ shouldAdvanceTime: true })` + `vi.advanceTimersByTimeAsync()`
+- Hook テスト: `renderHook()` + `waitFor()` / `act()` で非同期更新を待機
+- React Query 使用 hooks は `QueryClientProvider` でラップ
+
+## Chrome 拡張固有の注意事項
+
+- `useEffect` 内の非同期処理には `mounted` flag を設定し、cleanup 後の setState を防止
+- `AbortController` は abort 後に `ref.current = null` で後始末（再実行時の状態混乱防止）
+- `chrome.storage.onChanged.addListener` は必ず cleanup で `removeListener` する
+- 設定値は storage 境界（read/write）で `sanitizeSettings()` を適用（`lib/settings-store.ts`）
+- アイコンボタンには `aria-label` + `title`、SVG には `aria-hidden="true"` を付与
