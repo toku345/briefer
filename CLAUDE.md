@@ -1,98 +1,98 @@
 # Agent Guide
 
-このファイルは、このリポジトリで作業する AI コーディングエージェント向けの開発ガイドです。
+Development guide for AI coding agents working on this repository.
 
-## プロジェクト概要
+## Project Overview
 
-Briefer はローカル LLM（vLLM）を使って Web ページを要約・チャットできる Chrome 拡張機能（Manifest V3）。
+Briefer is a Chrome extension (Manifest V3) that summarizes and chats about web pages using a local LLM (vLLM).
 
-## コマンド
-
-```bash
-bun install              # 依存関係のインストール
-bun run build            # ビルド（WXT）
-bun run dev              # 開発モード（WXT HMR）
-bun run test             # テスト実行（Vitest）
-bun run test <file>      # 単一ファイルのテスト
-bun run typecheck        # 型チェックのみ
-bun run lint             # Lintチェック
-bun run check            # Lint + フォーマットチェック
-bun run check:fix        # Lint + フォーマット自動修正
-```
-
-## コミット前チェック
-
-コミット前に以下のコマンドがすべて成功すること:
+## Commands
 
 ```bash
-bun run typecheck    # 型チェック
-bun run check        # Lint + フォーマット
-bun run test         # テスト
+bun install              # Install dependencies
+bun run build            # Build (WXT)
+bun run dev              # Dev mode (WXT HMR)
+bun run test             # Run tests (Vitest)
+bun run test <file>      # Run a single test file
+bun run typecheck        # Type checking only
+bun run lint             # Lint check
+bun run check            # Lint + format check
+bun run check:fix        # Lint + format auto-fix
 ```
 
-## 拡張機能の読み込み
+## Pre-commit Checks
 
-1. `bun run build` でビルド
-2. `chrome://extensions` を開く
-3. デベロッパーモードを有効化
-4. 「パッケージ化されていない拡張機能を読み込む」から `.output/chrome-mv3` を選択
+All of the following commands must pass before committing:
 
-## アーキテクチャ
+```bash
+bun run typecheck    # Type checking
+bun run check        # Lint + format
+bun run test         # Tests
+```
 
-Side Panel から vLLM API へ直接 fetch する構成。Service Worker はリレーせず、Side Panel の開閉とコンテキストメニューのみ担当。
+## Loading the Extension
+
+1. Build with `bun run build`
+2. Open `chrome://extensions`
+3. Enable Developer mode
+4. Click "Load unpacked" and select `.output/chrome-mv3`
+
+## Architecture
+
+Side Panel fetches directly to vLLM API. Service Worker does not relay — it only handles Side Panel open/close and context menu registration.
 
 ```
 ┌─────────────┐     POST /v1/chat/completions
 │ Side Panel  │ ─────────────────────────────────▶ vLLM
-│ (チャットUI) │ ◀───────── streaming response ────  :8000
+│ (Chat UI)   │ ◀───────── streaming response ────  :8000
 └─────────────┘
        │
-       │ chrome.scripting.executeScript (戻り値でDOM取得)
+       │ chrome.scripting.executeScript (returns DOM content)
        ▼
-   対象タブ
+   Target Tab
 
 ┌─────────────────┐
-│ Service Worker  │  Side Panel 開閉 + コンテキストメニュー登録のみ
-│ (軽量)          │
+│ Service Worker  │  Side Panel open/close + context menu registration only
+│ (lightweight)   │
 └─────────────────┘
 ```
 
-### 主要ファイル
+### Key Files
 
-| ファイル | 役割 |
-|---------|------|
-| `lib/types.ts` | 共通型定義（ChatMessage, StreamChunk, Settings等） |
-| `lib/extractor.ts` | ページコンテンツ抽出（article > main > role="main" > body） |
-| `lib/llm-client.ts` | vLLM APIクライアント（ストリーミング対応、Side Panelから直接呼び出し） |
-| `lib/settings-store.ts` | 設定管理（サーバーURL、temperature、max_tokens） |
-| `lib/get-placeholder.ts` | InputContainerの動的placeholder算出（エラー/ローディング/正常の5状態判定） |
-| `entrypoints/background.ts` | Service Worker（Side Panel開閉 + コンテキストメニュー） |
-| `entrypoints/sidepanel/index.tsx` | Side Panel エントリーポイント |
-| `entrypoints/sidepanel/hooks/useChatStream.ts` | 統合ストリーミングhook（AbortController管理含む） |
-| `entrypoints/sidepanel/hooks/usePageContent.ts` | executeScriptによるページコンテンツ取得 |
-| `entrypoints/sidepanel/hooks/useServerHealth.ts` | vLLMサーバーのヘルスチェック |
-| `entrypoints/sidepanel/hooks/useSettings.ts` | 設定の読み込み・部分更新（型安全なジェネリクス） |
-| `entrypoints/sidepanel/components/SettingsPopover.tsx` | 設定UI（blur時バリデーション+リバート） |
-| `wxt.config.ts` | WXT設定（manifest定義、React module） |
+| File | Role |
+|------|------|
+| `lib/types.ts` | Shared type definitions (ChatMessage, StreamChunk, Settings, etc.) |
+| `lib/extractor.ts` | Page content extraction (article > main > role="main" > body) |
+| `lib/llm-client.ts` | vLLM API client (streaming, called directly from Side Panel) |
+| `lib/settings-store.ts` | Settings management (server URL, temperature, max_tokens) |
+| `lib/get-placeholder.ts` | Dynamic placeholder for InputContainer (5-state: error/loading/normal) |
+| `entrypoints/background.ts` | Service Worker (Side Panel open/close + context menu) |
+| `entrypoints/sidepanel/index.tsx` | Side Panel entry point |
+| `entrypoints/sidepanel/hooks/useChatStream.ts` | Unified streaming hook (incl. AbortController management) |
+| `entrypoints/sidepanel/hooks/usePageContent.ts` | Page content retrieval via executeScript |
+| `entrypoints/sidepanel/hooks/useServerHealth.ts` | vLLM server health check |
+| `entrypoints/sidepanel/hooks/useSettings.ts` | Settings loading and type-safe partial updates (generics) |
+| `entrypoints/sidepanel/components/SettingsPopover.tsx` | Settings UI (blur validation + revert) |
+| `wxt.config.ts` | WXT config (manifest definition, React module) |
 
-## LLM設定
+## LLM Settings
 
-`lib/settings-store.ts` で管理。サーバーURL（デフォルト: `http://localhost:8000/v1`）、temperature、max_tokens を UI から設定可能。モデルは vLLM サーバーから動的に取得し、UI 上で選択可能。
+Managed by `lib/settings-store.ts`. Server URL (default: `http://localhost:8000/v1`), temperature, and max_tokens are configurable from the UI. Models are dynamically fetched from the vLLM server and selectable in the UI.
 
-## テストパターン
+## Test Patterns
 
-- テスト環境: Vitest + @testing-library/react + jsdom
-- コンポーネントテストファイル先頭に `// @vitest-environment jsdom` を記載
-- Chrome API モック: `(globalThis as unknown as { chrome: typeof chrome }).chrome = mockChrome as unknown as typeof chrome` パターン
-- storage.onChanged リスナーテスト: リスナー配列を管理し手動発火でシミュレート
-- タイマーテスト: `vi.useFakeTimers({ shouldAdvanceTime: true })` + `vi.advanceTimersByTimeAsync()`
-- Hook テスト: `renderHook()` + `waitFor()` / `act()` で非同期更新を待機
-- React Query 使用 hooks は `QueryClientProvider` でラップ
+- Stack: Vitest + @testing-library/react + jsdom
+- Add `// @vitest-environment jsdom` at the top of component test files
+- Chrome API mocking: `(globalThis as unknown as { chrome: typeof chrome }).chrome = mockChrome as unknown as typeof chrome`
+- storage.onChanged listener tests: maintain a listener array and fire manually to simulate
+- Timer tests: `vi.useFakeTimers({ shouldAdvanceTime: true })` + `vi.advanceTimersByTimeAsync()`
+- Hook tests: `renderHook()` + `waitFor()` / `act()` for async state updates
+- Hooks using React Query must be wrapped with `QueryClientProvider`
 
-## Chrome 拡張固有の注意事項
+## Chrome Extension Gotchas
 
-- `useEffect` 内の非同期処理には `mounted` flag を設定し、cleanup 後の setState を防止
-- `AbortController` は abort 後に `ref.current = null` で後始末（再実行時の状態混乱防止）
-- `chrome.storage.onChanged.addListener` は必ず cleanup で `removeListener` する
-- 設定値は storage 境界（read/write）で `sanitizeSettings()` を適用（`lib/settings-store.ts`）
-- アイコンボタンには `aria-label` + `title`、SVG には `aria-hidden="true"` を付与
+- Use a `mounted` flag for async operations inside `useEffect` to prevent setState after cleanup
+- Null out `AbortController` after abort (`ref.current = null`) to avoid stale state on re-execution
+- Always call `removeListener` in cleanup for `chrome.storage.onChanged.addListener`
+- Sanitize settings at storage boundary (read/write) via `sanitizeSettings()` (`lib/settings-store.ts`)
+- Icon buttons require `aria-label` + `title`; SVGs require `aria-hidden="true"`
