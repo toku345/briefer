@@ -103,9 +103,11 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
           setError(err instanceof Error ? err.message : 'エラーが発生しました');
         }
       } finally {
-        abortRef.current = null;
-        setStreamingContent('');
-        setIsStreaming(false);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setStreamingContent('');
+          setIsStreaming(false);
+        }
       }
     },
     [tabId, pageContent, queryClient],
