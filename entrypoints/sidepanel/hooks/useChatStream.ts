@@ -121,15 +121,15 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
     if (!tabId) return;
     abortRef.current?.abort();
     abortRef.current = null;
+    setError(null);
+    setStreamingContent('');
+    setIsStreaming(false);
+    queryClient.setQueryData<ChatState>(['chat', tabId], { messages: [], pageContent: null });
     try {
       await chrome.storage.session.remove(`${STORAGE_PREFIX}${tabId}`);
     } catch (err) {
       console.error('[useChatStream] Failed to clear session storage:', err);
     }
-    queryClient.setQueryData<ChatState>(['chat', tabId], { messages: [], pageContent: null });
-    setError(null);
-    setStreamingContent('');
-    setIsStreaming(false);
   }, [tabId, queryClient]);
 
   const clearError = useCallback(() => setError(null), []);
