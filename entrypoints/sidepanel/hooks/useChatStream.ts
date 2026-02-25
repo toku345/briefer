@@ -118,6 +118,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
   const clearChat = useCallback(async () => {
     if (!tabId) return;
     abortRef.current?.abort();
+    abortRef.current = null;
     try {
       await chrome.storage.session.remove(`${STORAGE_PREFIX}${tabId}`);
     } catch (err) {
