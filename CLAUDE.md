@@ -41,7 +41,7 @@ bun run test         # Tests
 
 Side Panel fetches directly to vLLM API. Service Worker does not relay — it only handles Side Panel open/close and context menu registration.
 
-```
+```text
 ┌─────────────┐     POST /v1/chat/completions
 │ Side Panel  │ ─────────────────────────────────▶ vLLM
 │ (Chat UI)   │ ◀───────── streaming response ────  :8000
