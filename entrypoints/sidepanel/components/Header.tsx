@@ -29,9 +29,10 @@ export function Header({ onClearChat, hasMessages }: HeaderProps) {
   const gearBtnRef = useRef<HTMLButtonElement>(null);
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);
 
-  // 設定が未保存でモデルリストがある場合、最初のモデルを自動選択
+  // モデル未選択、またはサーバーに存在しない場合は最初のモデルを自動選択
   useEffect(() => {
-    if (model === null && models && models.length > 0) {
+    if (!models || models.length === 0) return;
+    if (model === null || !models.some((m) => m.id === model)) {
       selectModel(models[0].id);
     }
   }, [model, models, selectModel]);
