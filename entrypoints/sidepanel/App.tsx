@@ -19,6 +19,7 @@ export function App() {
   const {
     sendMessage,
     cancel,
+    clearChat,
     streamingContent,
     isStreaming,
     error: streamError,
@@ -38,7 +39,7 @@ export function App() {
 
   return (
     <div className="container">
-      <Header />
+      <Header onClearChat={clearChat} hasMessages={messages.length > 0} />
       <PageContextBar title={tabTitle} url={tabUrl} />
       <ChatContainer
         messages={messages}

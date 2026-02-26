@@ -13,6 +13,30 @@ vi.mock('@/lib/settings-store', () => ({
   }),
 }));
 
+type StorageChangeListener = (
+  changes: { [key: string]: chrome.storage.StorageChange },
+  area: string,
+) => void;
+
+const storageListeners: StorageChangeListener[] = [];
+
+const mockChrome = {
+  storage: {
+    onChanged: {
+      addListener: vi.fn((listener: StorageChangeListener) => {
+        storageListeners.push(listener);
+      }),
+      removeListener: vi.fn((listener: StorageChangeListener) => {
+        const idx = storageListeners.indexOf(listener);
+        if (idx >= 0) storageListeners.splice(idx, 1);
+      }),
+    },
+  },
+};
+
+(globalThis as unknown as { chrome: typeof chrome }).chrome =
+  mockChrome as unknown as typeof chrome;
+
 const fetchSpy = vi.fn();
 vi.stubGlobal('fetch', fetchSpy);
 
@@ -27,6 +51,7 @@ describe('useServerHealth', () => {
   beforeEach(() => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.clearAllMocks();
+    storageListeners.length = 0;
   });
 
   afterEach(() => {
@@ -142,5 +167,59 @@ describe('useServerHealth', () => {
     });
 
     expect(result.current.status).toBe('disconnected');
+  });
+
+  it('chrome.storage.onChanged で設定変更時にヘルスチェックを再実行する', async () => {
+    fetchSpy.mockResolvedValue({ ok: true });
+    const { result } = renderHook(() => useServerHealth());
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
+    const callCountBefore = fetchSpy.mock.calls.length;
+
+    // 設定変更イベントを発火
+    await act(async () => {
+      for (const listener of storageListeners) {
+        listener(
+          { briefer_settings: { oldValue: {}, newValue: { serverUrl: 'http://new:8000/v1' } } },
+          'local',
+        );
+      }
+    });
+
+    expect(fetchSpy.mock.calls.length).toBeGreaterThan(callCountBefore);
+  });
+
+  it('chrome.storage.onChanged で関係ないキーの変更は無視する', async () => {
+    fetchSpy.mockResolvedValue({ ok: true });
+    renderHook(() => useServerHealth());
+
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    await act(async () => {
+      for (const listener of storageListeners) {
+        listener({ other_key: { oldValue: null, newValue: 'val' } }, 'local');
+      }
+    });
+
+    // 初回チェック以外に呼ばれていない
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('unmount 時に chrome.storage.onChanged リスナーが解除される', async () => {
+    fetchSpy.mockResolvedValue({ ok: true });
+    const { unmount } = renderHook(() => useServerHealth());
+
+    await waitFor(() => {
+      expect(storageListeners.length).toBe(1);
+    });
+
+    unmount();
+
+    expect(storageListeners.length).toBe(0);
   });
 });

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getSettings } from '@/lib/settings-store';
+import { SETTINGS_KEY } from '@/lib/types';
 
 export type ConnectionStatus = 'connected' | 'checking' | 'disconnected';
 
@@ -10,16 +11,15 @@ export function useServerHealth() {
   const [status, setStatus] = useState<ConnectionStatus>('checking');
 
   useEffect(() => {
-    let isMounted = true;
+    const mounted = { current: true };
 
     async function check() {
       let serverUrl: string;
       try {
         ({ serverUrl } = await getSettings());
       } catch (error) {
-        // Extension storage failure (e.g. context invalidated) is not a server issue
-        console.debug('[useServerHealth] Failed to read settings:', error);
-        if (isMounted) setStatus('disconnected');
+        console.error('[useServerHealth] Failed to read settings:', error);
+        if (mounted.current) setStatus('disconnected');
         return;
       }
 
@@ -27,7 +27,7 @@ export function useServerHealth() {
         const response = await fetch(`${serverUrl}/models`, {
           signal: AbortSignal.timeout(5000),
         });
-        if (isMounted) {
+        if (mounted.current) {
           if (response.ok) {
             setStatus('connected');
           } else {
@@ -36,7 +36,7 @@ export function useServerHealth() {
           }
         }
       } catch (error) {
-        if (isMounted) setStatus('disconnected');
+        if (mounted.current) setStatus('disconnected');
         console.debug('[useServerHealth] Health check failed:', error);
       }
     }
@@ -44,9 +44,18 @@ export function useServerHealth() {
     check();
     const id = setInterval(check, HEALTH_CHECK_INTERVAL_MS);
 
+    // serverUrl 変更時に即座にヘルスチェックを再実行
+    const onChanged = (changes: { [key: string]: chrome.storage.StorageChange }, area: string) => {
+      if (area === 'local' && changes[SETTINGS_KEY]) {
+        check();
+      }
+    };
+    chrome.storage.onChanged.addListener(onChanged);
+
     return () => {
-      isMounted = false;
+      mounted.current = false;
       clearInterval(id);
+      chrome.storage.onChanged.removeListener(onChanged);
     };
   }, []);
 

@@ -82,7 +82,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
           setStreamingContent((prev) => prev + remaining);
         }
 
-        if (fullResponse && !hasError) {
+        if (fullResponse && !hasError && !controller.signal.aborted) {
           const assistantMessage: ChatMessage = {
             role: 'assistant',
             content: fullResponse,
@@ -103,9 +103,11 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
           setError(err instanceof Error ? err.message : 'エラーが発生しました');
         }
       } finally {
-        abortRef.current = null;
-        setStreamingContent('');
-        setIsStreaming(false);
+        if (abortRef.current === controller) {
+          abortRef.current = null;
+          setStreamingContent('');
+          setIsStreaming(false);
+        }
       }
     },
     [tabId, pageContent, queryClient],
@@ -115,7 +117,22 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
     abortRef.current?.abort();
   }, []);
 
+  const clearChat = useCallback(async () => {
+    if (!tabId) return;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setError(null);
+    setStreamingContent('');
+    setIsStreaming(false);
+    queryClient.setQueryData<ChatState>(['chat', tabId], { messages: [], pageContent: null });
+    try {
+      await chrome.storage.session.remove(`${STORAGE_PREFIX}${tabId}`);
+    } catch (err) {
+      console.error('[useChatStream] Failed to clear session storage:', err);
+    }
+  }, [tabId, queryClient]);
+
   const clearError = useCallback(() => setError(null), []);
 
-  return { sendMessage, cancel, streamingContent, isStreaming, error, clearError };
+  return { sendMessage, cancel, clearChat, streamingContent, isStreaming, error, clearError };
 }
