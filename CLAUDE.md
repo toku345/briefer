@@ -22,7 +22,7 @@ bun run check:fix        # Lint + format auto-fix
 
 ## Pre-commit Checks
 
-All of the following commands must pass before committing:
+All the following commands must pass before committing:
 
 ```bash
 bun run typecheck    # Type checking
