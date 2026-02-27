@@ -71,8 +71,6 @@ Side Panel fetches directly to vLLM API. Service Worker does not relay — it on
 | `entrypoints/sidepanel/hooks/useChatStream.ts` | Unified streaming hook (incl. AbortController management) |
 | `entrypoints/sidepanel/hooks/usePageContent.ts` | Page content retrieval via executeScript |
 | `entrypoints/sidepanel/hooks/useServerHealth.ts` | vLLM server health check |
-| `entrypoints/sidepanel/hooks/useSettings.ts` | Settings loading and type-safe partial updates (generics) |
-| `entrypoints/sidepanel/components/SettingsPopover.tsx` | Settings UI (blur validation + revert) |
 | `wxt.config.ts` | WXT config (manifest definition, React module) |
 
 ## LLM Settings
@@ -84,7 +82,7 @@ Managed by `lib/settings-store.ts`. Server URL (default: `http://localhost:8000/
 - Stack: Vitest + @testing-library/react + jsdom
 - Add `// @vitest-environment jsdom` at the top of component test files
 - Chrome API mocking: `(globalThis as unknown as { chrome: typeof chrome }).chrome = mockChrome as unknown as typeof chrome`
-- storage.onChanged listener tests: maintain a listener array and fire manually to simulate
+- storage.onChanged listener tests: collect listeners in an array and invoke them manually to simulate `storage.onChanged` events
 - Timer tests: `vi.useFakeTimers({ shouldAdvanceTime: true })` + `vi.advanceTimersByTimeAsync()`
 - Hook tests: `renderHook()` + `waitFor()` / `act()` for async state updates
 - Hooks using React Query must be wrapped with `QueryClientProvider`
@@ -94,5 +92,5 @@ Managed by `lib/settings-store.ts`. Server URL (default: `http://localhost:8000/
 - Use a `mounted` flag for async operations inside `useEffect` to prevent setState after cleanup
 - Null out `AbortController` after abort (`ref.current = null`) to avoid stale state on re-execution
 - Always call `removeListener` in cleanup for `chrome.storage.onChanged.addListener`
-- Sanitize settings at storage boundary (read/write) via `sanitizeSettings()` (`lib/settings-store.ts`)
+- `getSettings()` merges defaults with stored settings via `{ ...DEFAULT_SETTINGS, ...stored }` (`lib/settings-store.ts`)
 - Icon buttons require `aria-label` + `title`; SVGs require `aria-hidden="true"`
