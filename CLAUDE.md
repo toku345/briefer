@@ -94,3 +94,29 @@ Managed by `lib/settings-store.ts`. Server URL (default: `http://localhost:8000/
 - Always call `removeListener` in cleanup for `chrome.storage.onChanged.addListener`
 - `getSettings()` merges defaults with stored settings via `{ ...DEFAULT_SETTINGS, ...stored }` (`lib/settings-store.ts`)
 - Icon buttons require `aria-label` + `title`; SVGs require `aria-hidden="true"`
+
+## Rules for Implementation Planning
+
+- Before presenting a plan to the user, review it using the `codex` command. See below for specific usage.
+- Adjust the review instructions as needed. Note that codex tends to raise non-essential nitpicks, so always include an instruction like "Don't nitpick. Only flag critical issues."
+- Repeat the update → review cycle until `codex` has no more issues to raise.
+
+```bash
+# initial plan review request
+# Always specify the model with -m (gpt-5.3-codex is recommended)
+codex exec -m gpt-5.3-codex "Review this plan. Don't nitpick. Only flag critical issues: {plan_full_path}"
+
+# updated plan review request
+# Without resume --last, the context from the initial review will be lost
+codex exec resume --last -m gpt-5.3-codex "The plan has been updated. Review it again. Don't nitpick. Only flag critical issues: {plan_full_path}"
+```
+
+## Rules for Code Review
+
+- When a code review is requested, use `codex exec` to have Codex review the code as well.
+- Instead of writing lengthy explanations of the implementation, simply pass the commit hash or range to Codex.
+
+```bash
+git diff HEAD~1 > /tmp/claude/diff.txt
+codex exec -m gpt-5.3-codex "Review the following diff. Only flag critical bugs or design issues: /tmp/claude/diff.txt"
+```
