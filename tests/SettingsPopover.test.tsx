@@ -1,11 +1,14 @@
 /**
  * @vitest-environment jsdom
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_SETTINGS } from '../lib/types';
 
 const mockUpdateSetting = vi.hoisted(() => vi.fn());
+const mockHasHostPermission = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+const mockRequestHostPermission = vi.hoisted(() => vi.fn().mockResolvedValue(true));
+const mockIsLocalhostUrl = vi.hoisted(() => vi.fn().mockReturnValue(true));
 
 vi.mock('../entrypoints/sidepanel/hooks/useSettings', () => ({
   useSettings: () => ({
@@ -17,6 +20,12 @@ vi.mock('../entrypoints/sidepanel/hooks/useSettings', () => ({
     },
     updateSetting: mockUpdateSetting,
   }),
+}));
+
+vi.mock('../lib/permissions', () => ({
+  hasHostPermission: mockHasHostPermission,
+  requestHostPermission: mockRequestHostPermission,
+  isLocalhostUrl: mockIsLocalhostUrl,
 }));
 
 const { SettingsPopover } = await import('../entrypoints/sidepanel/components/SettingsPopover');
@@ -154,6 +163,78 @@ describe('SettingsPopover validation', () => {
 
       expect(mockUpdateSetting).not.toHaveBeenCalled();
       expect(input.classList.contains('settings-input-error')).toBe(false);
+    });
+  });
+
+  describe('パーミッション', () => {
+    it('localhost URL ではボタンが表示されない', () => {
+      mockIsLocalhostUrl.mockReturnValue(true);
+
+      render(<SettingsPopover onClose={vi.fn()} />);
+
+      expect(screen.queryByText('ホスト権限を許可')).toBeNull();
+    });
+
+    it('remote URL + 権限なし → ボタン表示', async () => {
+      mockIsLocalhostUrl.mockReturnValue(false);
+      mockHasHostPermission.mockResolvedValue(false);
+
+      render(<SettingsPopover onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('ホスト権限を許可')).toBeDefined();
+      });
+    });
+
+    it('remote URL + 権限あり → ボタン非表示', async () => {
+      mockIsLocalhostUrl.mockReturnValue(false);
+      mockHasHostPermission.mockResolvedValue(true);
+
+      render(<SettingsPopover onClose={vi.fn()} />);
+
+      // useEffect が完了するのを待つ
+      await waitFor(() => {
+        expect(mockHasHostPermission).toHaveBeenCalled();
+      });
+
+      expect(screen.queryByText('ホスト権限を許可')).toBeNull();
+    });
+
+    it('ボタンクリック → requestHostPermission 呼出、許可でボタン消滅', async () => {
+      mockIsLocalhostUrl.mockReturnValue(false);
+      mockHasHostPermission.mockResolvedValue(false);
+      mockRequestHostPermission.mockResolvedValue(true);
+
+      render(<SettingsPopover onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('ホスト権限を許可')).toBeDefined();
+      });
+
+      fireEvent.click(screen.getByText('ホスト権限を許可'));
+
+      await waitFor(() => {
+        expect(mockRequestHostPermission).toHaveBeenCalled();
+        expect(screen.queryByText('ホスト権限を許可')).toBeNull();
+      });
+    });
+
+    it('ボタンクリック → 拒否時にエラー表示', async () => {
+      mockIsLocalhostUrl.mockReturnValue(false);
+      mockHasHostPermission.mockResolvedValue(false);
+      mockRequestHostPermission.mockResolvedValue(false);
+
+      render(<SettingsPopover onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.getByText('ホスト権限を許可')).toBeDefined();
+      });
+
+      fireEvent.click(screen.getByText('ホスト権限を許可'));
+
+      await waitFor(() => {
+        expect(screen.getByText('ホスト権限が拒否されました')).toBeDefined();
+      });
     });
   });
 
