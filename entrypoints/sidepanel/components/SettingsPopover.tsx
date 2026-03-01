@@ -1,4 +1,5 @@
 import { type RefObject, useEffect, useRef, useState } from 'react';
+import { hasHostPermission, isLocalhostUrl, requestHostPermission } from '@/lib/permissions';
 import { useSettings } from '../hooks/useSettings';
 
 function flashError(el: HTMLElement) {
@@ -16,6 +17,8 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
   const [serverUrl, setServerUrl] = useState(settings.serverUrl);
   const [temperature, setTemperature] = useState(String(settings.temperature));
   const [maxTokens, setMaxTokens] = useState(String(settings.maxTokens));
+  const [needsPermission, setNeedsPermission] = useState(false);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // settings がロードされたら local state を同期
@@ -24,6 +27,25 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
     setTemperature(String(settings.temperature));
     setMaxTokens(String(settings.maxTokens));
   }, [settings.serverUrl, settings.temperature, settings.maxTokens]);
+
+  // serverUrl 変更時にホスト権限を確認
+  useEffect(() => {
+    if (isLocalhostUrl(settings.serverUrl)) {
+      setNeedsPermission(false);
+      setPermissionError(null);
+      return;
+    }
+    let cancelled = false;
+    hasHostPermission(settings.serverUrl).then((has) => {
+      if (!cancelled) {
+        setNeedsPermission(!has);
+        if (has) setPermissionError(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.serverUrl]);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -78,6 +100,17 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
     if (value !== settings.maxTokens) updateSetting('maxTokens', value);
   };
 
+  const handleRequestPermission = () => {
+    requestHostPermission(settings.serverUrl).then((granted) => {
+      if (granted) {
+        setNeedsPermission(false);
+        setPermissionError(null);
+      } else {
+        setPermissionError('ホスト権限が拒否されました');
+      }
+    });
+  };
+
   return (
     <div className="settings-popover" ref={popoverRef}>
       <label>
@@ -89,6 +122,14 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
           onBlur={handleServerUrlBlur}
         />
       </label>
+      {needsPermission && (
+        <div className="permission-request">
+          <button type="button" className="permission-btn" onClick={handleRequestPermission}>
+            ホスト権限を許可
+          </button>
+          {permissionError && <p className="permission-error">{permissionError}</p>}
+        </div>
+      )}
       <label>
         Temperature
         <input
