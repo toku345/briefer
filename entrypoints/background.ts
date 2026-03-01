@@ -27,13 +27,13 @@ export function setupBackground() {
     }
   });
 
-  chrome.contextMenus.onClicked.addListener((info, tab) => {
+  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     if (info.menuItemId === 'briefer-ask' && tab?.id) {
       const tabId = tab.id;
 
-      // storage 書込を open より先に開始（SP mount とのレースコンディション回避）
+      // storage 書込を await してから open（PANEL_READY とのレースコンディション排除）
       if (info.selectionText) {
-        chrome.storage.session
+        await chrome.storage.session
           .set({ [`pending_text_${tabId}`]: info.selectionText })
           .catch((err) => {
             console.error(`[Briefer] Failed to save selected text for tab ${tabId}:`, err);

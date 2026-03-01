@@ -114,14 +114,14 @@ describe('background service worker', () => {
       );
     });
 
-    it('briefer-ask クリック時に storage 保存 → サイドパネル開く → sendMessage', () => {
+    it('briefer-ask クリック時に storage 保存 → サイドパネル開く → sendMessage', async () => {
       const info = {
         menuItemId: 'briefer-ask',
         selectionText: '選択テキスト',
       } as chrome.contextMenus.OnClickData;
       const tab = { id: 789 } as chrome.tabs.Tab;
 
-      contextMenuClickedListener(info, tab);
+      await contextMenuClickedListener(info, tab);
 
       expect(mockChrome.storage.session.set).toHaveBeenCalledWith({
         pending_text_789: '選択テキスト',
@@ -139,7 +139,7 @@ describe('background service worker', () => {
       });
     });
 
-    it('sendMessage 失敗時もエラーが伝播しない', () => {
+    it('sendMessage 失敗時もエラーが伝播しない', async () => {
       mockChrome.runtime.sendMessage.mockRejectedValueOnce(new Error('No receiver'));
 
       const info = {
@@ -148,7 +148,7 @@ describe('background service worker', () => {
       } as chrome.contextMenus.OnClickData;
       const tab = { id: 100 } as chrome.tabs.Tab;
 
-      expect(() => contextMenuClickedListener(info, tab)).not.toThrow();
+      await expect(contextMenuClickedListener(info, tab)).resolves.not.toThrow();
     });
 
     it('タブIDがない場合はサイドパネルを開かない', () => {
