@@ -94,4 +94,31 @@ describe('InputContainer', () => {
     fireEvent.click(screen.getByText('停止'));
     expect(onCancel).toHaveBeenCalled();
   });
+
+  it('pendingText が渡されると textarea に値がセットされる', () => {
+    render(<InputContainer {...defaultProps} pendingText="テスト質問" />);
+
+    const textarea = screen.getByPlaceholderText('メッセージを入力...') as HTMLTextAreaElement;
+    expect(textarea.value).toBe('テスト質問');
+  });
+
+  it('pendingText セット後に onPendingTextConsumed が呼ばれる', () => {
+    const onPendingTextConsumed = vi.fn();
+    render(
+      <InputContainer
+        {...defaultProps}
+        pendingText="テスト質問"
+        onPendingTextConsumed={onPendingTextConsumed}
+      />,
+    );
+
+    expect(onPendingTextConsumed).toHaveBeenCalled();
+  });
+
+  it('pendingText が null の場合 textarea は空のまま', () => {
+    render(<InputContainer {...defaultProps} pendingText={null} />);
+
+    const textarea = screen.getByPlaceholderText('メッセージを入力...') as HTMLTextAreaElement;
+    expect(textarea.value).toBe('');
+  });
 });

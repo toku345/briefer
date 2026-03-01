@@ -48,6 +48,10 @@ export const DEFAULT_SETTINGS: Settings = {
   maxTokens: 2048,
 };
 
+export type PanelReadyMessage = { type: 'PANEL_READY'; tabId: number };
+export type PendingTextMessage = { type: 'PENDING_TEXT'; tabId: number; text: string };
+export type BrieferMessage = PanelReadyMessage | PendingTextMessage;
+
 export type ErrorCategory = 'server-unreachable' | 'page-unavailable' | 'general';
 
 export interface AppError {

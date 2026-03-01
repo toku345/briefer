@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useCallback, useRef, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 interface InputContainerProps {
   onSend: (content: string) => void;
@@ -6,6 +6,8 @@ interface InputContainerProps {
   isStreaming: boolean;
   disabled: boolean;
   placeholder: string;
+  pendingText?: string | null;
+  onPendingTextConsumed?: () => void;
 }
 
 export function InputContainer({
@@ -14,9 +16,18 @@ export function InputContainer({
   isStreaming,
   disabled,
   placeholder,
+  pendingText,
+  onPendingTextConsumed,
 }: InputContainerProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (pendingText) {
+      setValue(pendingText);
+      onPendingTextConsumed?.();
+    }
+  }, [pendingText, onPendingTextConsumed]);
 
   const handleSend = useCallback(() => {
     const content = value.trim();

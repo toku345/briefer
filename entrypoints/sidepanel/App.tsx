@@ -8,6 +8,7 @@ import { useChatHistory } from './hooks/useChatHistory';
 import { useChatStream } from './hooks/useChatStream';
 import { useCurrentTab } from './hooks/useCurrentTab';
 import { usePageContent } from './hooks/usePageContent';
+import { usePendingText } from './hooks/usePendingText';
 import { useServerHealth } from './hooks/useServerHealth';
 
 export function App() {
@@ -15,6 +16,7 @@ export function App() {
   const { tabId, title: tabTitle, url: tabUrl, error: tabError } = useCurrentTab();
   const { data: rawPageContent, error: contentError } = usePageContent(tabId);
   const pageContent = rawPageContent ?? null;
+  const { pendingText, consume } = usePendingText(tabId);
   const { data: chatState } = useChatHistory(tabId);
   const {
     sendMessage,
@@ -55,6 +57,8 @@ export function App() {
         isStreaming={isStreaming}
         disabled={!isReady || isStreaming}
         placeholder={placeholder}
+        pendingText={pendingText}
+        onPendingTextConsumed={consume}
       />
     </div>
   );
