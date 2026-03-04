@@ -6,7 +6,8 @@ export default defineConfig({
     name: 'Briefer',
     description: 'ローカルLLMでページを素早く要約・チャット',
     permissions: ['activeTab', 'scripting', 'storage', 'contextMenus'],
-    host_permissions: ['http://localhost:*/*'],
+    host_permissions: ['http://localhost:*/*', 'http://127.0.0.1:*/*'],
+    optional_host_permissions: ['http://*/*', 'https://*/*'],
     action: {
       default_title: 'Open Briefer',
       default_icon: {
@@ -16,8 +17,7 @@ export default defineConfig({
       },
     },
     content_security_policy: {
-      extension_pages:
-        "script-src 'self'; object-src 'self'; style-src 'self'; connect-src 'self' http://localhost:*",
+      extension_pages: "script-src 'self'; object-src 'self'; style-src 'self'",
     },
   },
 });
