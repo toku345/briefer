@@ -16,9 +16,13 @@ export function isLocalhostUrl(url: string): boolean {
   }
 }
 
+const ALLOWED_SCHEMES = new Set(['http:', 'https:']);
+
 export function extractOriginPattern(url: string): string | null {
   try {
-    return `${new URL(url).origin}/*`;
+    const parsed = new URL(url);
+    if (!ALLOWED_SCHEMES.has(parsed.protocol)) return null;
+    return `${parsed.origin}/*`;
   } catch {
     return null;
   }
@@ -28,12 +32,20 @@ export async function hasHostPermission(url: string): Promise<boolean> {
   if (isLocalhostUrl(url)) return true;
   const pattern = extractOriginPattern(url);
   if (!pattern) return false;
-  return chrome.permissions.contains({ origins: [pattern] });
+  try {
+    return await chrome.permissions.contains({ origins: [pattern] });
+  } catch {
+    return false;
+  }
 }
 
 export async function requestHostPermission(url: string): Promise<boolean> {
   if (isLocalhostUrl(url)) return true;
   const pattern = extractOriginPattern(url);
   if (!pattern) return false;
-  return chrome.permissions.request({ origins: [pattern] });
+  try {
+    return await chrome.permissions.request({ origins: [pattern] });
+  } catch {
+    return false;
+  }
 }

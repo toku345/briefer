@@ -531,6 +531,11 @@ body {
   background: #0055aa;
 }
 
+.permission-btn:focus-visible {
+  outline: 2px solid #66aaff;
+  outline-offset: 2px;
+}
+
 .permission-error {
   font-size: 11px;
   color: #f44336;

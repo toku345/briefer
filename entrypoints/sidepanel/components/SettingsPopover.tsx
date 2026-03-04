@@ -35,6 +35,7 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
       setPermissionError(null);
       return;
     }
+    setPermissionError(null);
     let cancelled = false;
     hasHostPermission(settings.serverUrl).then((has) => {
       if (!cancelled) {

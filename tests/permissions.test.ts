@@ -80,6 +80,22 @@ describe('permissions', () => {
     it('空文字 → null', () => {
       expect(extractOriginPattern('')).toBeNull();
     });
+
+    it('chrome:// スキーム → null', () => {
+      expect(extractOriginPattern('chrome://extensions')).toBeNull();
+    });
+
+    it('data: スキーム → null', () => {
+      expect(extractOriginPattern('data:text/html,<h1>test</h1>')).toBeNull();
+    });
+
+    it('blob: スキーム → null', () => {
+      expect(extractOriginPattern('blob:http://example.com/uuid')).toBeNull();
+    });
+
+    it('file: スキーム → null', () => {
+      expect(extractOriginPattern('file:///tmp/test.html')).toBeNull();
+    });
   });
 
   describe('hasHostPermission', () => {
@@ -109,6 +125,12 @@ describe('permissions', () => {
       expect(result).toBe(false);
       expect(mockChrome.permissions.contains).not.toHaveBeenCalled();
     });
+
+    it('chrome.permissions.contains が reject → false', async () => {
+      mockChrome.permissions.contains.mockRejectedValue(new Error('API error'));
+      const result = await hasHostPermission('http://remote:9000/v1');
+      expect(result).toBe(false);
+    });
   });
 
   describe('requestHostPermission', () => {
@@ -137,6 +159,12 @@ describe('permissions', () => {
       const result = await requestHostPermission('not-a-url');
       expect(result).toBe(false);
       expect(mockChrome.permissions.request).not.toHaveBeenCalled();
+    });
+
+    it('chrome.permissions.request が reject → false', async () => {
+      mockChrome.permissions.request.mockRejectedValue(new Error('API error'));
+      const result = await requestHostPermission('http://remote:9000/v1');
+      expect(result).toBe(false);
     });
   });
 });
