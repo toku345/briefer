@@ -46,15 +46,15 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
       return;
     }
     setPermissionError(null);
-    let cancelled = false;
+    let mounted = true;
     hasHostPermission(settings.serverUrl).then((has) => {
-      if (!cancelled) {
+      if (mounted) {
         setNeedsPermission(!has);
         if (has) setPermissionError(null);
       }
     });
     return () => {
-      cancelled = true;
+      mounted = false;
     };
   }, [settings.serverUrl]);
 

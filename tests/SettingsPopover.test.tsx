@@ -36,7 +36,11 @@ const { SettingsPopover } = await import('../entrypoints/sidepanel/components/Se
 
 describe('SettingsPopover validation', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    mockHasHostPermission.mockResolvedValue(true);
+    mockRequestHostPermission.mockResolvedValue(true);
+    mockIsLocalhostUrl.mockReturnValue(true);
+    mockExtractOriginPattern.mockReturnValue('http://localhost:8000/*');
   });
 
   describe('temperature', () => {
