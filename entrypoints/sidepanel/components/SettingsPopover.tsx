@@ -1,5 +1,10 @@
 import { type RefObject, useEffect, useRef, useState } from 'react';
-import { hasHostPermission, isLocalhostUrl, requestHostPermission } from '@/lib/permissions';
+import {
+  extractOriginPattern,
+  hasHostPermission,
+  isLocalhostUrl,
+  requestHostPermission,
+} from '@/lib/permissions';
 import { useSettings } from '../hooks/useSettings';
 
 function flashError(el: HTMLElement) {
@@ -33,6 +38,11 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
     if (isLocalhostUrl(settings.serverUrl)) {
       setNeedsPermission(false);
       setPermissionError(null);
+      return;
+    }
+    if (!extractOriginPattern(settings.serverUrl)) {
+      setNeedsPermission(false);
+      setPermissionError('http/https の URL を設定してください');
       return;
     }
     setPermissionError(null);
@@ -102,6 +112,10 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
   };
 
   const handleRequestPermission = () => {
+    if (!extractOriginPattern(settings.serverUrl)) {
+      setPermissionError('http/https の URL を設定してください');
+      return;
+    }
     requestHostPermission(settings.serverUrl).then((granted) => {
       if (granted) {
         setNeedsPermission(false);
@@ -128,9 +142,9 @@ export function SettingsPopover({ onClose, excludeRef }: SettingsPopoverProps) {
           <button type="button" className="permission-btn" onClick={handleRequestPermission}>
             ホスト権限を許可
           </button>
-          {permissionError && <p className="permission-error">{permissionError}</p>}
         </div>
       )}
+      {permissionError && <p className="permission-error">{permissionError}</p>}
       <label>
         Temperature
         <input

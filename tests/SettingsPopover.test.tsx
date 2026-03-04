@@ -9,6 +9,9 @@ const mockUpdateSetting = vi.hoisted(() => vi.fn());
 const mockHasHostPermission = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const mockRequestHostPermission = vi.hoisted(() => vi.fn().mockResolvedValue(true));
 const mockIsLocalhostUrl = vi.hoisted(() => vi.fn().mockReturnValue(true));
+const mockExtractOriginPattern = vi.hoisted(() =>
+  vi.fn().mockReturnValue('http://localhost:8000/*'),
+);
 
 vi.mock('../entrypoints/sidepanel/hooks/useSettings', () => ({
   useSettings: () => ({
@@ -23,6 +26,7 @@ vi.mock('../entrypoints/sidepanel/hooks/useSettings', () => ({
 }));
 
 vi.mock('../lib/permissions', () => ({
+  extractOriginPattern: mockExtractOriginPattern,
   hasHostPermission: mockHasHostPermission,
   requestHostPermission: mockRequestHostPermission,
   isLocalhostUrl: mockIsLocalhostUrl,
@@ -177,6 +181,7 @@ describe('SettingsPopover validation', () => {
 
     it('remote URL + 権限なし → ボタン表示', async () => {
       mockIsLocalhostUrl.mockReturnValue(false);
+      mockExtractOriginPattern.mockReturnValue('http://remote:9000/*');
       mockHasHostPermission.mockResolvedValue(false);
 
       render(<SettingsPopover onClose={vi.fn()} />);
@@ -188,6 +193,7 @@ describe('SettingsPopover validation', () => {
 
     it('remote URL + 権限あり → ボタン非表示', async () => {
       mockIsLocalhostUrl.mockReturnValue(false);
+      mockExtractOriginPattern.mockReturnValue('http://remote:9000/*');
       mockHasHostPermission.mockResolvedValue(true);
 
       render(<SettingsPopover onClose={vi.fn()} />);
@@ -202,6 +208,7 @@ describe('SettingsPopover validation', () => {
 
     it('ボタンクリック → requestHostPermission 呼出、許可でボタン消滅', async () => {
       mockIsLocalhostUrl.mockReturnValue(false);
+      mockExtractOriginPattern.mockReturnValue('http://remote:9000/*');
       mockHasHostPermission.mockResolvedValue(false);
       mockRequestHostPermission.mockResolvedValue(true);
 
@@ -219,8 +226,21 @@ describe('SettingsPopover validation', () => {
       });
     });
 
+    it('非対応スキーム → ボタン非表示 + エラーメッセージ', async () => {
+      mockIsLocalhostUrl.mockReturnValue(false);
+      mockExtractOriginPattern.mockReturnValue(null);
+
+      render(<SettingsPopover onClose={vi.fn()} />);
+
+      await waitFor(() => {
+        expect(screen.queryByText('ホスト権限を許可')).toBeNull();
+        expect(screen.getByText('http/https の URL を設定してください')).toBeDefined();
+      });
+    });
+
     it('ボタンクリック → 拒否時にエラー表示', async () => {
       mockIsLocalhostUrl.mockReturnValue(false);
+      mockExtractOriginPattern.mockReturnValue('http://remote:9000/*');
       mockHasHostPermission.mockResolvedValue(false);
       mockRequestHostPermission.mockResolvedValue(false);
 
