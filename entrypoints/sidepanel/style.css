@@ -396,6 +396,10 @@ body {
   margin: 8px 0;
 }
 
+.message.assistant p {
+  margin: 8px 0;
+}
+
 .message.assistant li > p {
   margin: 0;
 }
@@ -420,10 +424,6 @@ body {
 
 .message.assistant th {
   background: #444;
-}
-
-.message.assistant p {
-  margin: 8px 0;
 }
 
 .message.assistant p:first-child {
