@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  */
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
 import { ErrorMessage } from '../entrypoints/sidepanel/components/ErrorMessage';
 import type { AppError } from '../lib/types';
 
@@ -61,5 +61,66 @@ describe('ErrorMessage', () => {
 
     rerender(<ErrorMessage error={generalError} />);
     expect(screen.getByRole('alert').className).toContain('error-general');
+  });
+
+  it('stream-stalled カテゴリのCSSクラスが適用される', () => {
+    const stalledError: AppError = {
+      category: 'stream-stalled',
+      message: 'タイムアウト',
+      guidance: 'サーバーの負荷が高い可能性があります。再試行してください。',
+      retryable: true,
+    };
+    render(<ErrorMessage error={stalledError} />);
+    expect(screen.getByRole('alert').className).toContain('error-stream-stalled');
+  });
+
+  it('retryable=true + onRetry ありの場合「再試行」ボタンが表示される', () => {
+    const retryableError: AppError = {
+      category: 'general',
+      message: 'error',
+      guidance: 'guidance',
+      retryable: true,
+    };
+    const onRetry = vi.fn();
+    render(<ErrorMessage error={retryableError} onRetry={onRetry} />);
+
+    const retryBtn = screen.getByRole('button', { name: '再試行' });
+    expect(retryBtn).not.toBeNull();
+    fireEvent.click(retryBtn);
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('retryable=false の場合「再試行」ボタンが表示されない', () => {
+    const nonRetryableError: AppError = {
+      category: 'general',
+      message: 'error',
+      guidance: 'guidance',
+    };
+    const onRetry = vi.fn();
+    render(<ErrorMessage error={nonRetryableError} onRetry={onRetry} />);
+
+    expect(screen.queryByRole('button', { name: '再試行' })).toBeNull();
+  });
+
+  it('onRetry なしの場合「再試行」ボタンが表示されない', () => {
+    const retryableError: AppError = {
+      category: 'general',
+      message: 'error',
+      guidance: 'guidance',
+      retryable: true,
+    };
+    render(<ErrorMessage error={retryableError} />);
+
+    expect(screen.queryByRole('button', { name: '再試行' })).toBeNull();
+  });
+
+  it('onDismiss ありの場合「閉じる」ボタンが表示される', () => {
+    const onDismiss = vi.fn();
+    render(<ErrorMessage error={generalError} onDismiss={onDismiss} />);
+
+    const dismissBtn = screen.getByRole('button', { name: '閉じる' });
+    expect(dismissBtn).not.toBeNull();
+    fireEvent.click(dismissBtn);
+    expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 });

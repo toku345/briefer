@@ -541,6 +541,36 @@ body {
   color: #f44336;
 }
 
+.error-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.error-retry-btn,
+.error-dismiss-btn {
+  padding: 6px 16px;
+  background: transparent;
+  color: #ffaaaa;
+  border: 1px solid #ffaaaa;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+
+.error-retry-btn:hover,
+.error-dismiss-btn:hover {
+  background: #ffaaaa;
+  color: #1a1a1a;
+}
+
+.error-stream-stalled {
+  background: #661111;
+}
+
 .error-fallback {
   padding: 20px;
   text-align: center;
