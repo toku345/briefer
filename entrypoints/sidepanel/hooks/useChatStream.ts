@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
+import { STALL_TIMEOUT_MESSAGE } from '@/lib/error-classifier';
 import { streamChat } from '@/lib/llm-client';
 import { getSelectedModel } from '@/lib/settings-store';
 import { ThinkTagFilter } from '@/lib/think-tag-filter';
@@ -8,7 +9,9 @@ import type { ChatMessage, ChatState, ExtractedContent } from '@/lib/types';
 const MAX_MESSAGES = 20;
 const STORAGE_PREFIX = 'chat_';
 
+/** Time To First Token: 最初のチャンクが届くまでの許容時間 */
 export const TTFT_TIMEOUT_MS = 60_000;
+/** トークン間の許容間隔: 次のチャンクが届かなければ stall と判定 */
 export const INTER_TOKEN_TIMEOUT_MS = 15_000;
 
 async function persistMessages(tabId: number, messages: ChatMessage[]): Promise<void> {
@@ -80,13 +83,9 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
         const apiMessages = allMessages.filter((m) => m.role !== 'system');
 
         resetStallTimer(TTFT_TIMEOUT_MS);
-        let receivedFirstChunk = false;
 
         for await (const chunk of streamChat(apiMessages, pageContent, model, controller.signal)) {
           if (chunk.type === 'chunk' && chunk.content) {
-            if (!receivedFirstChunk) {
-              receivedFirstChunk = true;
-            }
             resetStallTimer(INTER_TOKEN_TIMEOUT_MS);
 
             const filtered = filter.process(chunk.content);
@@ -121,14 +120,19 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
             pageContent: old?.pageContent ?? null,
           }));
 
-          await persistMessages(tabId, updatedMessages);
+          try {
+            await persistMessages(tabId, updatedMessages);
+          } catch (persistErr) {
+            console.error('[useChatStream] Failed to persist messages:', persistErr);
+          }
         }
       } catch (err) {
         if (!controller.signal.aborted) {
+          console.error('[useChatStream] Stream error:', err);
           setError(err instanceof Error ? err.message : 'エラーが発生しました');
           didFail = true;
         } else if (stallTimedOut) {
-          setError('サーバーからの応答がタイムアウトしました');
+          setError(STALL_TIMEOUT_MESSAGE);
           didFail = true;
         }
         // ユーザーキャンセル（aborted && !stallTimedOut）→ エラーなし
@@ -154,7 +158,9 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
   const retry = useCallback(() => {
     const lastMessage = lastUserMessageRef.current;
     if (!lastMessage) return;
-    sendMessageCore(lastMessage, { skipUserMessageAppend: true });
+    sendMessageCore(lastMessage, { skipUserMessageAppend: true }).catch((err) => {
+      console.error('[useChatStream] Retry failed:', err);
+    });
   }, [sendMessageCore]);
 
   const cancel = useCallback(() => {
@@ -165,6 +171,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
     if (!tabId) return;
     abortRef.current?.abort();
     abortRef.current = null;
+    lastUserMessageRef.current = null;
     setError(null);
     setStreamingContent('');
     setIsStreaming(false);
