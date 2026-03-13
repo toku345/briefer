@@ -13,6 +13,7 @@ describe('classifyError', () => {
       category: 'general',
       message: 'タブが見つかりません',
       guidance: expect.stringContaining('再試行'),
+      retryable: false,
     });
   });
 
@@ -107,12 +108,12 @@ describe('classifyError', () => {
     expect(stallErr?.retryable).toBe(true);
   });
 
-  it('tabError/contentError起因のエラーはretryableを持たない', () => {
+  it('tabError/contentError起因のエラーはretryable: falseを持つ', () => {
     const tabErr = classifyError('タブエラー', null, null);
-    expect(tabErr?.retryable).toBeUndefined();
+    expect(tabErr?.retryable).toBe(false);
 
     const contentErr = classifyError(null, new Error('このページでは使用できません'), null);
-    expect(contentErr?.retryable).toBeUndefined();
+    expect(contentErr?.retryable).toBe(false);
   });
 
   // --- guidance ---

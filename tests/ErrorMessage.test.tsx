@@ -11,18 +11,21 @@ describe('ErrorMessage', () => {
     category: 'server-unreachable',
     message: 'サーバーに接続できません',
     guidance: 'vLLMサーバーが起動しているか確認してください。',
+    retryable: true,
   };
 
   const pageError: AppError = {
     category: 'page-unavailable',
     message: 'このページでは使用できません',
     guidance: 'このページでは使用できません。通常のWebページで試してください。',
+    retryable: false,
   };
 
   const generalError: AppError = {
     category: 'general',
     message: 'API error: 500',
     guidance: '時間をおいて再試行するか、拡張機能を再読み込みしてください。',
+    retryable: false,
   };
 
   it('server-unreachable エラーを表示する', () => {
@@ -95,6 +98,7 @@ describe('ErrorMessage', () => {
       category: 'general',
       message: 'error',
       guidance: 'guidance',
+      retryable: false,
     };
     const onRetry = vi.fn();
     render(<ErrorMessage error={nonRetryableError} onRetry={onRetry} />);

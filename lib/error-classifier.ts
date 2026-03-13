@@ -1,5 +1,7 @@
 import type { AppError, ErrorCategory } from './types';
 
+export const STALL_TIMEOUT_MESSAGE = 'サーバーからの応答がタイムアウトしました';
+
 const GUIDANCE: Record<ErrorCategory, string> = {
   'server-unreachable': 'vLLMサーバーが起動しているか確認してください。',
   'page-unavailable': 'このページでは使用できません。通常のWebページで試してください。',
@@ -36,6 +38,7 @@ export function classifyError(
       category: 'general',
       message: tabError,
       guidance: GUIDANCE.general,
+      retryable: false,
     };
   }
 
@@ -46,12 +49,14 @@ export function classifyError(
         category: 'page-unavailable',
         message: 'このページでは使用できません',
         guidance: GUIDANCE['page-unavailable'],
+        retryable: false,
       };
     }
     return {
       category: 'general',
       message: msg,
       guidance: GUIDANCE.general,
+      retryable: false,
     };
   }
 

@@ -58,5 +58,5 @@ export interface AppError {
   category: ErrorCategory;
   message: string;
   guidance: string;
-  retryable?: boolean;
+  retryable: boolean;
 }

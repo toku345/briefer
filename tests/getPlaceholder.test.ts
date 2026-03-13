@@ -7,12 +7,14 @@ describe('getPlaceholder', () => {
     category: 'server-unreachable',
     message: 'サーバーに接続できません',
     guidance: 'vLLM サーバーが起動しているか確認してください。',
+    retryable: true,
   };
 
   const pageError: AppError = {
     category: 'page-unavailable',
     message: 'このページでは使用できません',
     guidance: '通常の Web ページで試してください。',
+    retryable: false,
   };
 
   it('server-unreachableエラー時', () => {
@@ -34,6 +36,7 @@ describe('getPlaceholder', () => {
       category: 'general',
       message: 'Something went wrong',
       guidance: '再試行してください。',
+      retryable: false,
     };
     expect(
       getPlaceholder(
