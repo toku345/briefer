@@ -48,10 +48,15 @@ export const DEFAULT_SETTINGS: Settings = {
   maxTokens: 2048,
 };
 
-export type ErrorCategory = 'server-unreachable' | 'page-unavailable' | 'general';
+export type ErrorCategory =
+  | 'server-unreachable'
+  | 'page-unavailable'
+  | 'stream-stalled'
+  | 'general';
 
 export interface AppError {
   category: ErrorCategory;
   message: string;
   guidance: string;
+  retryable?: boolean;
 }

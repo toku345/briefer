@@ -66,6 +66,14 @@ describe('classifyError', () => {
     expect(result?.category).toBe('server-unreachable');
   });
 
+  // --- streamError: stream-stalled ---
+  it('streamErrorが「タイムアウト」を含む場合はstream-stalledを返す', () => {
+    const result = classifyError(null, null, 'サーバーからの応答がタイムアウトしました');
+    expect(result?.category).toBe('stream-stalled');
+    expect(result?.retryable).toBe(true);
+    expect(result?.guidance).toContain('再試行');
+  });
+
   // --- streamError: general ---
   it('streamErrorがAPIエラーの場合はgeneralを返す', () => {
     const result = classifyError(null, null, 'API error: 500 Internal Server Error');
@@ -87,14 +95,36 @@ describe('classifyError', () => {
     expect(result?.category).toBe('page-unavailable');
   });
 
+  // --- retryable ---
+  it('streamError起因のエラーはretryable: trueを持つ', () => {
+    const serverErr = classifyError(null, null, 'Failed to fetch');
+    expect(serverErr?.retryable).toBe(true);
+
+    const generalErr = classifyError(null, null, 'API error: 500');
+    expect(generalErr?.retryable).toBe(true);
+
+    const stallErr = classifyError(null, null, 'サーバーからの応答がタイムアウトしました');
+    expect(stallErr?.retryable).toBe(true);
+  });
+
+  it('tabError/contentError起因のエラーはretryableを持たない', () => {
+    const tabErr = classifyError('タブエラー', null, null);
+    expect(tabErr?.retryable).toBeUndefined();
+
+    const contentErr = classifyError(null, new Error('このページでは使用できません'), null);
+    expect(contentErr?.retryable).toBeUndefined();
+  });
+
   // --- guidance ---
   it('各カテゴリにguidanceが設定されている', () => {
     const tab = classifyError('err', null, null);
     const content = classifyError(null, new Error('このページでは使用できません'), null);
     const stream = classifyError(null, null, 'Failed to fetch');
+    const stalled = classifyError(null, null, 'サーバーからの応答がタイムアウトしました');
 
     expect(tab?.guidance).toBeTruthy();
     expect(content?.guidance).toBeTruthy();
     expect(stream?.guidance).toBeTruthy();
+    expect(stalled?.guidance).toBeTruthy();
   });
 });

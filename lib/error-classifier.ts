@@ -3,6 +3,7 @@ import type { AppError, ErrorCategory } from './types';
 const GUIDANCE: Record<ErrorCategory, string> = {
   'server-unreachable': 'vLLMサーバーが起動しているか確認してください。',
   'page-unavailable': 'このページでは使用できません。通常のWebページで試してください。',
+  'stream-stalled': 'サーバーの負荷が高い可能性があります。再試行してください。',
   general: '時間をおいて再試行するか、拡張機能を再読み込みしてください。',
 };
 
@@ -14,6 +15,8 @@ const SERVER_UNREACHABLE_PATTERNS = [
   'ERR_CONNECTION_REFUSED',
   'Load failed',
 ];
+
+const STREAM_STALLED_PATTERNS = ['タイムアウト'];
 
 function matchesAny(message: string, patterns: string[]): boolean {
   return patterns.some((p) => message.includes(p));
@@ -53,17 +56,27 @@ export function classifyError(
   }
 
   if (streamError) {
+    if (matchesAny(streamError, STREAM_STALLED_PATTERNS)) {
+      return {
+        category: 'stream-stalled',
+        message: streamError,
+        guidance: GUIDANCE['stream-stalled'],
+        retryable: true,
+      };
+    }
     if (matchesAny(streamError, SERVER_UNREACHABLE_PATTERNS)) {
       return {
         category: 'server-unreachable',
         message: 'サーバーに接続できません',
         guidance: GUIDANCE['server-unreachable'],
+        retryable: true,
       };
     }
     return {
       category: 'general',
       message: streamError,
       guidance: GUIDANCE.general,
+      retryable: true,
     };
   }
 
