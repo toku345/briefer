@@ -166,6 +166,59 @@ describe('useChatStream stall detection', () => {
     expect(result.current.error).toBe('サーバーからの応答がタイムアウトしました');
   });
 
+  it('2チャンク目がトークン間タイマーをリセットする', async () => {
+    // 2つのチャンクを間隔をおいて送る generator
+    mockStreamChat.mockImplementation(async function* (_m, _p, _model, signal) {
+      yield { type: 'chunk' as const, content: 'first' };
+      // INTER_TOKEN_TIMEOUT_MS 未満待機 → タイマーリセットされるはず
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, INTER_TOKEN_TIMEOUT_MS - 1000);
+        signal?.addEventListener('abort', () => {
+          clearTimeout(timer);
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      });
+      yield { type: 'chunk' as const, content: 'second' };
+      // abort されるまで待機
+      await new Promise<void>((_resolve, reject) => {
+        if (signal?.aborted) {
+          reject(new DOMException('aborted', 'AbortError'));
+          return;
+        }
+        signal?.addEventListener('abort', () => {
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      });
+    });
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useChatStream(1, pageContent), { wrapper });
+
+    await act(async () => {
+      result.current.sendMessage('hello');
+    });
+
+    expect(result.current.isStreaming).toBe(true);
+
+    // 1チャンク目→2チャンク目の間（INTER_TOKEN_TIMEOUT_MS - 1000ms）を進める
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INTER_TOKEN_TIMEOUT_MS - 1000);
+    });
+
+    // 2チャンク目が届いてタイマーリセットされるので、まだストリーミング中
+    expect(result.current.isStreaming).toBe(true);
+    expect(result.current.error).toBeNull();
+    expect(result.current.streamingContent).toBe('firstsecond');
+
+    // さらに INTER_TOKEN_TIMEOUT_MS 経過 → stall 検出
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(INTER_TOKEN_TIMEOUT_MS);
+    });
+
+    expect(result.current.isStreaming).toBe(false);
+    expect(result.current.error).toBe('サーバーからの応答がタイムアウトしました');
+  });
+
   it('トークン間タイムアウト: 1チャンク受信後15秒経過するとエラーになり部分応答が保持される', async () => {
     mockStreamChat.mockImplementation(createHangingStream([{ type: 'chunk', content: 'partial' }]));
 
@@ -191,6 +244,19 @@ describe('useChatStream stall detection', () => {
 describe('useChatStream retry', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('sendMessage未実行でretryを呼んでも何も起きない', async () => {
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useChatStream(1, pageContent), { wrapper });
+
+    await act(async () => {
+      result.current.retry();
+    });
+
+    expect(mockStreamChat).not.toHaveBeenCalled();
+    expect(result.current.isStreaming).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 
   it('リトライでユーザーメッセージが重複しない', async () => {
@@ -221,10 +287,6 @@ describe('useChatStream retry', () => {
     expect(userMessagesAfterError).toHaveLength(1);
 
     // リトライ → 成功
-    await act(async () => {
-      result.current.clearError();
-    });
-
     await act(async () => {
       await result.current.retry();
     });
@@ -283,17 +345,7 @@ describe('useChatStream partial response preservation', () => {
   });
 
   it('キャンセル時はstreamingContentがクリアされエラーが設定されない', async () => {
-    mockStreamChat.mockImplementation(async function* (_m, _p, _model, signal) {
-      yield { type: 'chunk' as const, content: 'partial' };
-      // abort されるまで待機
-      await new Promise<void>((_resolve, reject) => {
-        if (signal?.aborted) {
-          reject(new DOMException('aborted', 'AbortError'));
-          return;
-        }
-        signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
-      });
-    });
+    mockStreamChat.mockImplementation(createHangingStream([{ type: 'chunk', content: 'partial' }]));
 
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useChatStream(1, pageContent), { wrapper });
