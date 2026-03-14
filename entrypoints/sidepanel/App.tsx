@@ -56,6 +56,7 @@ export function App() {
         error={error}
         onAction={handleSend}
         actionDisabled={!isReady || isStreaming}
+        // Retry gated by classified error's retryable flag; dismiss only for stream-origin errors
         onRetry={error?.retryable ? handleRetry : undefined}
         onDismiss={streamError ? handleDismissError : undefined}
       />
