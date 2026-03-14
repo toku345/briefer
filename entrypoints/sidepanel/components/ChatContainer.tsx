@@ -12,6 +12,8 @@ interface ChatContainerProps {
   error: AppError | null;
   onAction: (message: string) => void;
   actionDisabled: boolean;
+  onRetry?: () => void;
+  onDismiss?: () => void;
 }
 
 export function ChatContainer({
@@ -21,6 +23,8 @@ export function ChatContainer({
   error,
   onAction,
   actionDisabled,
+  onRetry,
+  onDismiss,
 }: ChatContainerProps) {
   const containerRef = useRef<HTMLElement>(null);
 
@@ -33,13 +37,15 @@ export function ChatContainer({
   }, [messages, streamingContent]);
 
   const showWelcome = messages.length === 0 && !isStreaming && !error;
+  const showPartialResponse = !isStreaming && !!streamingContent && !!error;
 
   return (
     <main className="chat-container" ref={containerRef}>
       {showWelcome && <WelcomeMessage onAction={onAction} disabled={actionDisabled} />}
       <MessageList messages={messages} />
       {isStreaming && <StreamingMessage content={streamingContent} />}
-      {error && <ErrorMessage error={error} />}
+      {showPartialResponse && <StreamingMessage content={streamingContent} showCursor={false} />}
+      {error && <ErrorMessage error={error} onRetry={onRetry} onDismiss={onDismiss} />}
     </main>
   );
 }

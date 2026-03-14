@@ -52,10 +52,15 @@ export type PanelReadyMessage = { type: 'PANEL_READY'; tabId: number };
 export type PendingTextMessage = { type: 'PENDING_TEXT'; tabId: number; text: string };
 export type BrieferMessage = PanelReadyMessage | PendingTextMessage;
 
-export type ErrorCategory = 'server-unreachable' | 'page-unavailable' | 'general';
+export type ErrorCategory =
+  | 'server-unreachable'
+  | 'page-unavailable'
+  | 'stream-stalled'
+  | 'general';
 
 export interface AppError {
   category: ErrorCategory;
   message: string;
   guidance: string;
+  retryable: boolean;
 }

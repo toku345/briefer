@@ -20,6 +20,7 @@ export function App() {
   const { data: chatState } = useChatHistory(tabId);
   const {
     sendMessage,
+    retry,
     cancel,
     clearChat,
     streamingContent,
@@ -35,8 +36,15 @@ export function App() {
 
   const handleSend = (content: string) => {
     if (!isReady || isStreaming) return;
-    clearError();
     sendMessage(content);
+  };
+
+  const handleRetry = () => {
+    retry();
+  };
+
+  const handleDismissError = () => {
+    clearError();
   };
 
   return (
@@ -50,12 +58,15 @@ export function App() {
         error={error}
         onAction={handleSend}
         actionDisabled={!isReady || isStreaming}
+        // Retry gated by classified error's retryable flag; dismiss only for stream-origin errors
+        onRetry={error?.retryable ? handleRetry : undefined}
+        onDismiss={streamError ? handleDismissError : undefined}
       />
       <InputContainer
         onSend={handleSend}
         onCancel={cancel}
         isStreaming={isStreaming}
-        disabled={!isReady || isStreaming}
+        disabled={!isReady || isStreaming || !!error}
         placeholder={placeholder}
         pendingText={pendingText}
         onPendingTextConsumed={consume}
