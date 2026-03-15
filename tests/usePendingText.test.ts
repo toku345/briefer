@@ -26,11 +26,6 @@ const mockChrome = {
       }),
     },
   },
-  storage: {
-    session: {
-      remove: vi.fn().mockResolvedValue(undefined),
-    },
-  },
 };
 
 (globalThis as unknown as { chrome: typeof chrome }).chrome =
@@ -84,7 +79,7 @@ describe('usePendingText', () => {
     expect(result.current.pendingText).toBeNull();
   });
 
-  it('onMessage で PENDING_TEXT 受信 → pendingText 更新 + storage.session.remove 呼出', async () => {
+  it('onMessage で PENDING_TEXT 受信 → pendingText 更新', async () => {
     mockChrome.runtime.sendMessage.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => usePendingText(42));
@@ -102,10 +97,9 @@ describe('usePendingText', () => {
     });
 
     expect(result.current.pendingText).toBe('以下のテキストについて質問:\n\n選択テキスト');
-    expect(mockChrome.storage.session.remove).toHaveBeenCalledWith('pending_text_42');
   });
 
-  it('異なる tabId の PENDING_TEXT は無視する（storage 削除もしない）', async () => {
+  it('異なる tabId の PENDING_TEXT は無視する', async () => {
     mockChrome.runtime.sendMessage.mockResolvedValue(undefined);
 
     const { result } = renderHook(() => usePendingText(42));
@@ -123,7 +117,6 @@ describe('usePendingText', () => {
     });
 
     expect(result.current.pendingText).toBeNull();
-    expect(mockChrome.storage.session.remove).not.toHaveBeenCalled();
   });
 
   it('consume() で pendingText が null になる', async () => {
@@ -159,5 +152,69 @@ describe('usePendingText', () => {
 
     expect(mockChrome.runtime.onMessage.removeListener).toHaveBeenCalled();
     expect(messageListeners.length).toBe(0);
+  });
+
+  it('sendMessage が reject しても pendingText は null のまま', async () => {
+    mockChrome.runtime.sendMessage.mockRejectedValueOnce(new Error('No receiver'));
+
+    const { result } = renderHook(() => usePendingText(1));
+
+    await waitFor(() => {
+      expect(mockChrome.runtime.sendMessage).toHaveBeenCalled();
+    });
+
+    expect(result.current.pendingText).toBeNull();
+  });
+
+  it('unmount 後に sendMessage が resolve しても pendingText は更新されない', async () => {
+    let resolveMsg: (value: unknown) => void = () => {};
+    mockChrome.runtime.sendMessage.mockReturnValue(
+      new Promise((resolve) => {
+        resolveMsg = resolve;
+      }),
+    );
+
+    const { result, unmount } = renderHook(() => usePendingText(1));
+    unmount();
+
+    // unmount 後に resolve
+    resolveMsg({ type: 'PENDING_TEXT', tabId: 1, text: '遅延テキスト' });
+
+    // pendingText は null のまま（setState が呼ばれない）
+    expect(result.current.pendingText).toBeNull();
+  });
+
+  it('直送 PENDING_TEXT 受信後に PANEL_READY 応答が返っても上書きしない', async () => {
+    let resolvePanelReady: (value: unknown) => void = () => {};
+    mockChrome.runtime.sendMessage.mockReturnValue(
+      new Promise((resolve) => {
+        resolvePanelReady = resolve;
+      }),
+    );
+
+    const { result } = renderHook(() => usePendingText(42));
+
+    await waitFor(() => {
+      expect(messageListeners.length).toBe(1);
+    });
+
+    // 直送 PENDING_TEXT が先に到着
+    act(() => {
+      messageListeners[0](
+        { type: 'PENDING_TEXT', tabId: 42, text: '新しいテキスト' },
+        {} as chrome.runtime.MessageSender,
+        vi.fn(),
+      );
+    });
+
+    expect(result.current.pendingText).toBe('以下のテキストについて質問:\n\n新しいテキスト');
+
+    // 古い PANEL_READY 応答が遅れて resolve
+    resolvePanelReady({ type: 'PENDING_TEXT', tabId: 42, text: '古いテキスト' });
+
+    // 上書きされないことを確認
+    await waitFor(() => {
+      expect(result.current.pendingText).toBe('以下のテキストについて質問:\n\n新しいテキスト');
+    });
   });
 });
