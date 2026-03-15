@@ -114,14 +114,14 @@ describe('background service worker', () => {
       );
     });
 
-    it('briefer-ask クリック時に storage 保存 → サイドパネル開く → sendMessage', async () => {
+    it('briefer-ask クリック時に storage 保存 → サイドパネル開く → sendMessage → storage 削除', async () => {
       const info = {
         menuItemId: 'briefer-ask',
         selectionText: '選択テキスト',
       } as chrome.contextMenus.OnClickData;
       const tab = { id: 789 } as chrome.tabs.Tab;
 
-      await contextMenuClickedListener(info, tab);
+      contextMenuClickedListener(info, tab);
 
       expect(mockChrome.storage.session.set).toHaveBeenCalledWith({
         pending_text_789: '選択テキスト',
@@ -132,10 +132,19 @@ describe('background service worker', () => {
         enabled: true,
       });
       expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 789 });
-      expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
-        type: 'PENDING_TEXT',
-        tabId: 789,
-        text: '選択テキスト',
+
+      // sendMessage は storage.set().then() でチェインされるため待機
+      await vi.waitFor(() => {
+        expect(mockChrome.runtime.sendMessage).toHaveBeenCalledWith({
+          type: 'PENDING_TEXT',
+          tabId: 789,
+          text: '選択テキスト',
+        });
+      });
+
+      // 直送成功時に storage をクリーンアップ
+      await vi.waitFor(() => {
+        expect(mockChrome.storage.session.remove).toHaveBeenCalledWith('pending_text_789');
       });
     });
 
@@ -148,7 +157,30 @@ describe('background service worker', () => {
       } as chrome.contextMenus.OnClickData;
       const tab = { id: 100 } as chrome.tabs.Tab;
 
-      await expect(contextMenuClickedListener(info, tab)).resolves.not.toThrow();
+      contextMenuClickedListener(info, tab);
+
+      await vi.waitFor(() => {
+        expect(mockChrome.runtime.sendMessage).toHaveBeenCalled();
+      });
+
+      // sendMessage 失敗時は storage.session.remove を呼ばない
+      expect(mockChrome.storage.session.remove).not.toHaveBeenCalled();
+    });
+
+    it('selectionText なしでも sidePanel を開く（storage.set と sendMessage は呼ばない）', () => {
+      const info = { menuItemId: 'briefer-ask' } as chrome.contextMenus.OnClickData;
+      const tab = { id: 500 } as chrome.tabs.Tab;
+
+      contextMenuClickedListener(info, tab);
+
+      expect(mockChrome.storage.session.set).not.toHaveBeenCalled();
+      expect(mockChrome.sidePanel.setOptions).toHaveBeenCalledWith({
+        tabId: 500,
+        path: 'sidepanel.html',
+        enabled: true,
+      });
+      expect(mockChrome.sidePanel.open).toHaveBeenCalledWith({ tabId: 500 });
+      expect(mockChrome.runtime.sendMessage).not.toHaveBeenCalled();
     });
 
     it('タブIDがない場合はサイドパネルを開かない', () => {
@@ -218,6 +250,25 @@ describe('background service worker', () => {
         });
       });
       expect(mockChrome.storage.session.remove).not.toHaveBeenCalled();
+    });
+
+    it('storage.session.get が reject した場合もエラーログ + sendResponse(空テキスト)', async () => {
+      mockChrome.storage.session.get.mockRejectedValueOnce(new Error('storage error'));
+      const sendResponse = vi.fn();
+
+      messageListeners[0](
+        { type: 'PANEL_READY', tabId: 30 },
+        {} as chrome.runtime.MessageSender,
+        sendResponse,
+      );
+
+      await vi.waitFor(() => {
+        expect(sendResponse).toHaveBeenCalledWith({
+          type: 'PENDING_TEXT',
+          tabId: 30,
+          text: '',
+        });
+      });
     });
   });
 });

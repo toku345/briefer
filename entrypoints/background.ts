@@ -27,19 +27,11 @@ export function setupBackground() {
     }
   });
 
-  chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === 'briefer-ask' && tab?.id) {
       const tabId = tab.id;
 
-      // storage 書込を await してから open（PANEL_READY とのレースコンディション排除）
-      if (info.selectionText) {
-        await chrome.storage.session
-          .set({ [`pending_text_${tabId}`]: info.selectionText })
-          .catch((err) => {
-            console.error(`[Briefer] Failed to save selected text for tab ${tabId}:`, err);
-          });
-      }
-
+      // ユーザージェスチャー保持のため即座に呼ぶ
       chrome.sidePanel.setOptions({ tabId, path: 'sidepanel.html', enabled: true }).catch((err) => {
         console.error(`[Briefer] Failed to setOptions for context menu tab ${tabId}:`, err);
       });
@@ -48,15 +40,35 @@ export function setupBackground() {
         console.error(`[Briefer] Failed to open Side Panel for context menu:`, err);
       });
 
-      // SP 起動済みの場合に直接テキストを送信（失敗は無視 → PANEL_READY フローにフォールバック）
       if (info.selectionText) {
-        chrome.runtime
-          .sendMessage({
-            type: 'PENDING_TEXT',
-            tabId,
-            text: info.selectionText,
-          } satisfies BrieferMessage)
-          .catch(() => {});
+        const text = info.selectionText;
+        const key = `pending_text_${tabId}`;
+        chrome.storage.session
+          .set({ [key]: text })
+          .then(() => {
+            // storage 書込完了後に直送を試行
+            chrome.runtime
+              .sendMessage({
+                type: 'PENDING_TEXT',
+                tabId,
+                text,
+              } satisfies BrieferMessage)
+              .then(() => {
+                // 直送成功 → storage をクリーンアップ
+                chrome.storage.session.remove(key).catch((err) => {
+                  console.error(`[Briefer] Failed to remove pending text for tab ${tabId}:`, err);
+                });
+              })
+              .catch((err) => {
+                console.debug(
+                  '[Briefer] sendMessage(PENDING_TEXT) failed (PANEL_READY fallback):',
+                  err,
+                );
+              });
+          })
+          .catch((err) => {
+            console.error(`[Briefer] Failed to save selected text for tab ${tabId}:`, err);
+          });
       }
     }
   });
@@ -66,18 +78,24 @@ export function setupBackground() {
     (message: BrieferMessage, _sender, sendResponse: (response?: BrieferMessage) => void) => {
       if (message.type === 'PANEL_READY') {
         const key = `pending_text_${message.tabId}`;
-        chrome.storage.session.get(key).then((result) => {
-          const text = (result[key] as string) ?? '';
-          sendResponse({ type: 'PENDING_TEXT', tabId: message.tabId, text });
-          if (text) {
-            chrome.storage.session.remove(key).catch((err) => {
-              console.error(
-                `[Briefer] Failed to remove pending text for tab ${message.tabId}:`,
-                err,
-              );
-            });
-          }
-        });
+        chrome.storage.session
+          .get(key)
+          .then((result) => {
+            const text = (result[key] as string) ?? '';
+            sendResponse({ type: 'PENDING_TEXT', tabId: message.tabId, text });
+            if (text) {
+              chrome.storage.session.remove(key).catch((err) => {
+                console.error(
+                  `[Briefer] Failed to remove pending text for tab ${message.tabId}:`,
+                  err,
+                );
+              });
+            }
+          })
+          .catch((err) => {
+            console.error(`[Briefer] Failed to get pending text for tab ${message.tabId}:`, err);
+            sendResponse({ type: 'PENDING_TEXT', tabId: message.tabId, text: '' });
+          });
         // 非同期 sendResponse のため true を返す
         return true;
       }
