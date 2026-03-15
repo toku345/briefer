@@ -18,7 +18,7 @@ export default defineConfig({
     },
     commands: {
       _execute_action: {
-        suggested_key: { default: 'Ctrl+Shift+B', mac: 'Command+Shift+B' },
+        suggested_key: { default: 'Ctrl+Shift+U', mac: 'Command+Shift+U' },
         description: 'Briefer を開く',
       },
     },
