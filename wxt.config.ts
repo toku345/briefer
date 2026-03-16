@@ -16,6 +16,12 @@ export default defineConfig({
         128: '/icon-128.png',
       },
     },
+    commands: {
+      _execute_action: {
+        suggested_key: { default: 'Ctrl+Shift+U', mac: 'Command+Shift+U' },
+        description: 'Briefer を開く',
+      },
+    },
     content_security_policy: {
       extension_pages: "script-src 'self'; object-src 'self'; style-src 'self'",
     },

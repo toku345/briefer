@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useCallback, useRef, useState } from 'react';
+import { type KeyboardEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 interface InputContainerProps {
   onSend: (content: string) => void;
@@ -6,6 +6,8 @@ interface InputContainerProps {
   isStreaming: boolean;
   disabled: boolean;
   placeholder: string;
+  pendingText?: string | null;
+  onPendingTextConsumed?: () => void;
 }
 
 export function InputContainer({
@@ -14,9 +16,25 @@ export function InputContainer({
   isStreaming,
   disabled,
   placeholder,
+  pendingText,
+  onPendingTextConsumed,
 }: InputContainerProps) {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (pendingText) {
+      setValue(pendingText);
+      onPendingTextConsumed?.();
+      const textarea = textareaRef.current;
+      if (textarea) {
+        // React のコミット前に DOM 値を直接セットし、scrollHeight が正しい値を返すようにする
+        textarea.value = pendingText;
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+      }
+    }
+  }, [pendingText, onPendingTextConsumed]);
 
   const handleSend = useCallback(() => {
     const content = value.trim();
