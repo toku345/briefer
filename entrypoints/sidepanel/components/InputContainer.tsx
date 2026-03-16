@@ -26,14 +26,13 @@ export function InputContainer({
     if (pendingText) {
       setValue(pendingText);
       onPendingTextConsumed?.();
-      // textarea の高さを再計算
-      requestAnimationFrame(() => {
-        const textarea = textareaRef.current;
-        if (textarea) {
-          textarea.style.height = 'auto';
-          textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
-        }
-      });
+      const textarea = textareaRef.current;
+      if (textarea) {
+        // React のコミット前に DOM 値を直接セットし、scrollHeight が正しい値を返すようにする
+        textarea.value = pendingText;
+        textarea.style.height = 'auto';
+        textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
+      }
     }
   }, [pendingText, onPendingTextConsumed]);
 
