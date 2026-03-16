@@ -146,7 +146,7 @@ export async function* streamChat(
       signal,
     });
   } catch (error) {
-    if (signal?.aborted) return;
+    if (error instanceof DOMException && error.name === 'AbortError') return;
     yield {
       type: 'error',
       error: error instanceof Error ? error.message : 'Unknown error',
@@ -202,7 +202,7 @@ export async function* streamChat(
 
     yield { type: 'done', modelId: model };
   } catch (error) {
-    if (signal?.aborted) return;
+    if (error instanceof DOMException && error.name === 'AbortError') return;
     yield {
       type: 'error',
       error: error instanceof Error ? error.message : 'Unknown error',
