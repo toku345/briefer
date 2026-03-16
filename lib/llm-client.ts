@@ -117,6 +117,7 @@ export async function* streamChat(
   try {
     settings = await getSettings();
   } catch (error) {
+    console.error('[streamChat] Failed to load settings:', error);
     yield {
       type: 'error',
       error: error instanceof Error ? error.message : 'Failed to load settings',
@@ -147,9 +148,10 @@ export async function* streamChat(
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return;
+    console.error('[streamChat] Fetch failed:', error);
     yield {
       type: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : `Fetch failed: ${String(error)}`,
     };
     return;
   }
@@ -203,9 +205,10 @@ export async function* streamChat(
     yield { type: 'done', modelId: model };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return;
+    console.error('[streamChat] Stream read failed:', error);
     yield {
       type: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : `Stream failed: ${String(error)}`,
     };
   } finally {
     reader.releaseLock();
