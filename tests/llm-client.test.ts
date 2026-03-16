@@ -284,6 +284,52 @@ describe('llm-client', () => {
       expect(errorChunks).toHaveLength(0);
     });
 
+    it('fetch失敗時にyield経路でエラーを返す', async () => {
+      mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toEqual({ type: 'error', error: 'Failed to fetch' });
+    });
+
+    it('fetch失敗時にAbortSignalがキャンセル済みならエラーを出さない', async () => {
+      const controller = new AbortController();
+      controller.abort();
+
+      mockFetch.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(
+        messages,
+        mockPageContent,
+        TEST_MODEL,
+        controller.signal,
+      )) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toHaveLength(0);
+    });
+
+    it('getSettings失敗時にyield経路でエラーを返す', async () => {
+      mockChrome.storage.local.get.mockRejectedValueOnce(new Error('Storage unavailable'));
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toHaveLength(1);
+      expect(chunks[0]).toEqual({ type: 'error', error: 'Storage unavailable' });
+    });
+
     it('空のcontentはスキップする', async () => {
       const mockStream = new ReadableStream({
         start(controller) {

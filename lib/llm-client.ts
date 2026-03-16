@@ -113,7 +113,17 @@ export async function* streamChat(
   model: string,
   signal?: AbortSignal,
 ): AsyncGenerator<StreamChunk> {
-  const settings = await getSettings();
+  let settings: Awaited<ReturnType<typeof getSettings>>;
+  try {
+    settings = await getSettings();
+  } catch (error) {
+    yield {
+      type: 'error',
+      error: error instanceof Error ? error.message : 'Failed to load settings',
+    };
+    return;
+  }
+
   const serverUrl = settings.serverUrl.replace(/\/+$/, '');
   const systemMessage = buildSystemMessage(pageContent);
 
@@ -127,12 +137,22 @@ export async function* streamChat(
     stream: true,
   };
 
-  const response = await fetch(`${serverUrl}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-    signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${serverUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+  } catch (error) {
+    if (signal?.aborted) return;
+    yield {
+      type: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+    return;
+  }
 
   if (!response.ok) {
     yield {
