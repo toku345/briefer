@@ -214,20 +214,3 @@ export async function* streamChat(
     reader.releaseLock();
   }
 }
-
-export async function chat(
-  messages: ChatMessage[],
-  pageContent: ExtractedContent,
-  model: string,
-  signal?: AbortSignal,
-): Promise<string> {
-  let result = '';
-  for await (const chunk of streamChat(messages, pageContent, model, signal)) {
-    if (chunk.type === 'chunk' && chunk.content) {
-      result += chunk.content;
-    } else if (chunk.type === 'error') {
-      throw new Error(chunk.error);
-    }
-  }
-  return result;
-}
