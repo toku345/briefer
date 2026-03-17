@@ -254,32 +254,43 @@ describe('llm-client', () => {
     it('AbortSignalによるキャンセルでAbortErrorをthrowする', async () => {
       const controller = new AbortController();
 
-      const mockStream = new ReadableStream({
-        start(ctrl) {
-          ctrl.enqueue(
-            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"start"}}]}\n'),
-          );
-          // キャンセル後にエラーを発生させる
-          setTimeout(() => ctrl.error(new DOMException('Aborted', 'AbortError')), 10);
-        },
+      mockFetch.mockImplementationOnce(async (_url: string, init?: RequestInit) => {
+        const signal = init?.signal as AbortSignal | undefined;
+        if (!signal) throw new Error('missing abort signal');
+
+        const body = new ReadableStream({
+          start(ctrl) {
+            ctrl.enqueue(
+              new TextEncoder().encode('data: {"choices":[{"delta":{"content":"start"}}]}\n'),
+            );
+            signal.addEventListener(
+              'abort',
+              () => ctrl.error(new DOMException('Aborted', 'AbortError')),
+              { once: true },
+            );
+          },
+        });
+
+        return { ok: true, body };
       });
 
-      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
-
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
 
-      setTimeout(() => controller.abort(), 5);
-
-      await expect(async () => {
-        for await (const _chunk of streamChat(
-          messages,
-          mockPageContent,
-          TEST_MODEL,
-          controller.signal,
-        )) {
-          // consume
-        }
-      }).rejects.toThrow(DOMException);
+      await expect(
+        (async () => {
+          for await (const chunk of streamChat(
+            messages,
+            mockPageContent,
+            TEST_MODEL,
+            controller.signal,
+          )) {
+            chunks.push(chunk);
+            if (chunk.type === 'chunk') controller.abort();
+          }
+        })(),
+      ).rejects.toThrow(DOMException);
+      expect(chunks).toEqual([{ type: 'chunk', content: 'start' }]);
     });
 
     it('fetch失敗時にyield経路でエラーを返す', async () => {
@@ -326,6 +337,36 @@ describe('llm-client', () => {
 
       expect(chunks).toHaveLength(1);
       expect(chunks[0]).toEqual({ type: 'error', error: 'Storage unavailable' });
+    });
+
+    it('stream read失敗時にyield経路でエラーを返す', async () => {
+      const encoded = new TextEncoder().encode(
+        'data: {"choices":[{"delta":{"content":"start"}}]}\n',
+      );
+      let delivered = false;
+      const mockStream = new ReadableStream({
+        pull(controller) {
+          if (!delivered) {
+            delivered = true;
+            controller.enqueue(encoded);
+            return;
+          }
+          controller.error(new Error('stream broke'));
+        },
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual([
+        { type: 'chunk', content: 'start' },
+        { type: 'error', error: 'stream broke' },
+      ]);
     });
 
     it('空のcontentはスキップする', async () => {
