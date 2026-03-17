@@ -24,7 +24,7 @@ const mockChrome = {
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-const { buildSystemMessage, chat, fetchModels, streamChat } = await import('../lib/llm-client');
+const { buildSystemMessage, fetchModels, streamChat } = await import('../lib/llm-client');
 
 describe('llm-client', () => {
   const mockPageContent: ExtractedContent = {
@@ -120,97 +120,6 @@ describe('llm-client', () => {
       expect(mockFetch).toHaveBeenCalledWith('http://explicit:8000/v1/models', {
         signal: undefined,
       });
-    });
-  });
-
-  describe('chat', () => {
-    it('設定のURLでAPIを呼び出す', async () => {
-      mockLocalStorage[SETTINGS_KEY] = { serverUrl: 'http://myserver:8000/v1' };
-
-      const mockStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(
-            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"OK"}}]}\n'),
-          );
-          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-          controller.close();
-        },
-      });
-
-      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
-
-      const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
-      const result = await chat(messages, mockPageContent, TEST_MODEL);
-
-      expect(result).toBe('OK');
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://myserver:8000/v1/chat/completions',
-        expect.objectContaining({
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        }),
-      );
-    });
-
-    it('設定のtemperatureとmaxTokensを使用する', async () => {
-      mockLocalStorage[SETTINGS_KEY] = { temperature: 0.8, maxTokens: 4096 };
-
-      const mockStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-          controller.close();
-        },
-      });
-
-      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
-
-      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
-      await chat(messages, mockPageContent, TEST_MODEL);
-
-      const callArgs = mockFetch.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-
-      expect(body.temperature).toBe(0.8);
-      expect(body.max_tokens).toBe(4096);
-    });
-
-    it('APIエラー時に例外をスローする', async () => {
-      mockFetch.mockResolvedValue({
-        ok: false,
-        status: 500,
-        statusText: 'Internal Server Error',
-        body: null,
-      });
-
-      const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
-
-      await expect(chat(messages, mockPageContent, TEST_MODEL)).rejects.toThrow('API error: 500');
-    });
-
-    it('modelIdを含むメッセージからAPIリクエスト時にmodelIdを除外する', async () => {
-      const mockStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
-          controller.close();
-        },
-      });
-
-      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
-
-      const messages: ChatMessage[] = [
-        { role: 'user', content: '要約して' },
-        { role: 'assistant', content: '要約です', modelId: 'org/some-model' },
-        { role: 'user', content: '続けて' },
-      ];
-
-      await chat(messages, mockPageContent, TEST_MODEL);
-
-      const callArgs = mockFetch.mock.calls[0];
-      const body = JSON.parse(callArgs[1].body);
-
-      for (const msg of body.messages) {
-        expect(msg).not.toHaveProperty('modelId');
-      }
     });
   });
 
@@ -392,6 +301,106 @@ describe('llm-client', () => {
       const contentChunks = chunks.filter((c) => c.type === 'chunk');
       expect(contentChunks).toHaveLength(1);
       expect(contentChunks[0]).toEqual({ type: 'chunk', content: 'text' });
+    });
+
+    it('設定のURLでAPIを呼び出す', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { serverUrl: 'http://myserver:8000/v1' };
+
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode('data: {"choices":[{"delta":{"content":"OK"}}]}\n'),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toContainEqual({ type: 'chunk', content: 'OK' });
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://myserver:8000/v1/chat/completions',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+    });
+
+    it('設定のtemperatureとmaxTokensを使用する', async () => {
+      mockLocalStorage[SETTINGS_KEY] = { temperature: 0.8, maxTokens: 4096 };
+
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      for await (const _ of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        // drain
+      }
+
+      const callArgs = mockFetch.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      expect(body.temperature).toBe(0.8);
+      expect(body.max_tokens).toBe(4096);
+    });
+
+    it('APIエラー時にerror chunkを返す', async () => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        body: null,
+      });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: '要約して' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        chunks.push(chunk);
+      }
+
+      expect(chunks).toEqual([{ type: 'error', error: 'API error: 500 Internal Server Error' }]);
+    });
+
+    it('modelIdを含むメッセージからAPIリクエスト時にmodelIdを除外する', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [
+        { role: 'user', content: '要約して' },
+        { role: 'assistant', content: '要約です', modelId: 'org/some-model' },
+        { role: 'user', content: '続けて' },
+      ];
+
+      for await (const _ of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        // drain
+      }
+
+      const callArgs = mockFetch.mock.calls[0];
+      const body = JSON.parse(callArgs[1].body);
+
+      for (const msg of body.messages) {
+        expect(msg).not.toHaveProperty('modelId');
+      }
     });
   });
 });
