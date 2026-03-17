@@ -147,7 +147,7 @@ export async function* streamChat(
       signal,
     });
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    if (error instanceof DOMException && error.name === 'AbortError') return;
     console.error('[streamChat] Fetch failed:', error);
     yield {
       type: 'error',
@@ -204,7 +204,7 @@ export async function* streamChat(
 
     yield { type: 'done', modelId: model };
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    if (error instanceof DOMException && error.name === 'AbortError') return;
     console.error('[streamChat] Stream read failed:', error);
     yield {
       type: 'error',
@@ -213,21 +213,4 @@ export async function* streamChat(
   } finally {
     reader.releaseLock();
   }
-}
-
-export async function chat(
-  messages: ChatMessage[],
-  pageContent: ExtractedContent,
-  model: string,
-  signal?: AbortSignal,
-): Promise<string> {
-  let result = '';
-  for await (const chunk of streamChat(messages, pageContent, model, signal)) {
-    if (chunk.type === 'chunk' && chunk.content) {
-      result += chunk.content;
-    } else if (chunk.type === 'error') {
-      throw new Error(chunk.error);
-    }
-  }
-  return result;
 }

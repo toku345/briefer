@@ -62,13 +62,13 @@ function createHangingStream(initialChunks: StreamChunk[] = []) {
       yield chunk;
     }
     // abort されるまで無限に待機
-    await new Promise<void>((_resolve, reject) => {
+    await new Promise<void>((resolve) => {
       if (signal?.aborted) {
-        reject(new DOMException('The operation was aborted.', 'AbortError'));
+        resolve();
         return;
       }
       signal?.addEventListener('abort', () => {
-        reject(new DOMException('The operation was aborted.', 'AbortError'));
+        resolve();
       });
     });
   };
@@ -171,22 +171,22 @@ describe('useChatStream stall detection', () => {
     mockStreamChat.mockImplementation(async function* (_m, _p, _model, signal) {
       yield { type: 'chunk' as const, content: 'first' };
       // INTER_TOKEN_TIMEOUT_MS 未満待機 → タイマーリセットされるはず
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         const timer = setTimeout(resolve, INTER_TOKEN_TIMEOUT_MS - 1000);
         signal?.addEventListener('abort', () => {
           clearTimeout(timer);
-          reject(new DOMException('aborted', 'AbortError'));
+          resolve();
         });
       });
       yield { type: 'chunk' as const, content: 'second' };
       // abort されるまで待機
-      await new Promise<void>((_resolve, reject) => {
+      await new Promise<void>((resolve) => {
         if (signal?.aborted) {
-          reject(new DOMException('aborted', 'AbortError'));
+          resolve();
           return;
         }
         signal?.addEventListener('abort', () => {
-          reject(new DOMException('aborted', 'AbortError'));
+          resolve();
         });
       });
     });

@@ -100,6 +100,11 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
           }
         }
 
+        if (stallTimedOut) {
+          setError(STALL_TIMEOUT_MESSAGE);
+          didFail = true;
+        }
+
         const remaining = filter.flush();
         if (remaining) {
           fullResponse += remaining;
@@ -127,15 +132,9 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
           }
         }
       } catch (err) {
-        if (!controller.signal.aborted) {
-          console.error('[useChatStream] Stream error:', err);
-          setError(err instanceof Error ? err.message : 'エラーが発生しました');
-          didFail = true;
-        } else if (stallTimedOut) {
-          setError(STALL_TIMEOUT_MESSAGE);
-          didFail = true;
-        }
-        // ユーザーキャンセル（aborted && !stallTimedOut）→ エラーなし
+        console.error('[useChatStream] Stream error:', err);
+        setError(err instanceof Error ? err.message : 'エラーが発生しました');
+        didFail = true;
       } finally {
         if (stallTimerId !== undefined) clearTimeout(stallTimerId);
         if (abortRef.current === controller) {
