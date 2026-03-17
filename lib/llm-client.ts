@@ -113,7 +113,18 @@ export async function* streamChat(
   model: string,
   signal?: AbortSignal,
 ): AsyncGenerator<StreamChunk> {
-  const settings = await getSettings();
+  let settings: Awaited<ReturnType<typeof getSettings>>;
+  try {
+    settings = await getSettings();
+  } catch (error) {
+    console.error('[streamChat] Failed to load settings:', error);
+    yield {
+      type: 'error',
+      error: error instanceof Error ? error.message : 'Failed to load settings',
+    };
+    return;
+  }
+
   const serverUrl = settings.serverUrl.replace(/\/+$/, '');
   const systemMessage = buildSystemMessage(pageContent);
 
@@ -127,12 +138,23 @@ export async function* streamChat(
     stream: true,
   };
 
-  const response = await fetch(`${serverUrl}/chat/completions`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(request),
-    signal,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${serverUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request),
+      signal,
+    });
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    console.error('[streamChat] Fetch failed:', error);
+    yield {
+      type: 'error',
+      error: error instanceof Error ? error.message : `Fetch failed: ${String(error)}`,
+    };
+    return;
+  }
 
   if (!response.ok) {
     yield {
@@ -182,10 +204,11 @@ export async function* streamChat(
 
     yield { type: 'done', modelId: model };
   } catch (error) {
-    if (signal?.aborted) return;
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    console.error('[streamChat] Stream read failed:', error);
     yield {
       type: 'error',
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : `Stream failed: ${String(error)}`,
     };
   } finally {
     reader.releaseLock();
