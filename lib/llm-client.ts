@@ -147,7 +147,7 @@ export async function* streamChat(
       signal,
     });
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') return;
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
     console.error('[streamChat] Fetch failed:', error);
     yield {
       type: 'error',
@@ -204,7 +204,7 @@ export async function* streamChat(
 
     yield { type: 'done', modelId: model };
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') return;
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
     console.error('[streamChat] Stream read failed:', error);
     yield {
       type: 'error',

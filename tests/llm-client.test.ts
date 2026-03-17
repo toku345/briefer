@@ -251,7 +251,7 @@ describe('llm-client', () => {
       expect(chunks).toContainEqual({ type: 'error', error: 'No response body' });
     });
 
-    it('AbortSignalによるキャンセルでエラーを出さない', async () => {
+    it('AbortSignalによるキャンセルでAbortErrorをthrowする', async () => {
       const controller = new AbortController();
 
       const mockStream = new ReadableStream({
@@ -267,21 +267,19 @@ describe('llm-client', () => {
       mockFetch.mockResolvedValue({ ok: true, body: mockStream });
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
-      const chunks: StreamChunk[] = [];
 
       setTimeout(() => controller.abort(), 5);
 
-      for await (const chunk of streamChat(
-        messages,
-        mockPageContent,
-        TEST_MODEL,
-        controller.signal,
-      )) {
-        chunks.push(chunk);
-      }
-
-      const errorChunks = chunks.filter((c) => c.type === 'error');
-      expect(errorChunks).toHaveLength(0);
+      await expect(async () => {
+        for await (const _chunk of streamChat(
+          messages,
+          mockPageContent,
+          TEST_MODEL,
+          controller.signal,
+        )) {
+          // consume
+        }
+      }).rejects.toThrow(DOMException);
     });
 
     it('fetch失敗時にyield経路でエラーを返す', async () => {
@@ -297,24 +295,24 @@ describe('llm-client', () => {
       expect(chunks[0]).toEqual({ type: 'error', error: 'Failed to fetch' });
     });
 
-    it('fetch失敗時にAbortSignalがキャンセル済みならエラーを出さない', async () => {
+    it('fetch失敗時にAbortErrorならthrowする', async () => {
       const controller = new AbortController();
       controller.abort();
 
       mockFetch.mockRejectedValue(new DOMException('Aborted', 'AbortError'));
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
-      const chunks: StreamChunk[] = [];
-      for await (const chunk of streamChat(
-        messages,
-        mockPageContent,
-        TEST_MODEL,
-        controller.signal,
-      )) {
-        chunks.push(chunk);
-      }
 
-      expect(chunks).toHaveLength(0);
+      await expect(async () => {
+        for await (const _chunk of streamChat(
+          messages,
+          mockPageContent,
+          TEST_MODEL,
+          controller.signal,
+        )) {
+          // consume
+        }
+      }).rejects.toThrow(DOMException);
     });
 
     it('getSettings失敗時にyield経路でエラーを返す', async () => {
