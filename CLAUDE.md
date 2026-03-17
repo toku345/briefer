@@ -87,6 +87,7 @@ Managed by `lib/settings-store.ts`. Server URL (default: `http://localhost:8000/
 - Timer tests: `vi.useFakeTimers({ shouldAdvanceTime: true })` + `vi.advanceTimersByTimeAsync()`
 - Hook tests: `renderHook()` + `waitFor()` / `act()` for async state updates
 - Hooks using React Query must be wrapped with `QueryClientProvider`
+- Abort-aware mock generators: use `resolve()` on abort (not `reject(DOMException)`) to match `streamChat`'s silent-return behavior
 
 ## Chrome Extension Gotchas
 
@@ -95,3 +96,4 @@ Managed by `lib/settings-store.ts`. Server URL (default: `http://localhost:8000/
 - Always call `removeListener` in cleanup for `chrome.storage.onChanged.addListener`
 - `getSettings()` merges defaults with stored settings via `{ ...DEFAULT_SETTINGS, ...stored }` (`lib/settings-store.ts`)
 - Icon buttons require `aria-label` + `title`; SVGs require `aria-hidden="true"`
+- `streamChat` (async generator) is silent-return on AbortError — callers check state flags (e.g. `stallTimedOut`) after iteration, not in `catch`
