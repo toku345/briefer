@@ -289,7 +289,7 @@ describe('llm-client', () => {
             if (chunk.type === 'chunk') controller.abort();
           }
         })(),
-      ).rejects.toThrow(DOMException);
+      ).rejects.toMatchObject({ name: 'AbortError' });
       expect(chunks).toEqual([{ type: 'chunk', content: 'start' }]);
     });
 
@@ -314,16 +314,18 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
 
-      await expect(async () => {
-        for await (const _chunk of streamChat(
-          messages,
-          mockPageContent,
-          TEST_MODEL,
-          controller.signal,
-        )) {
-          // consume
-        }
-      }).rejects.toThrow(DOMException);
+      await expect(
+        (async () => {
+          for await (const _chunk of streamChat(
+            messages,
+            mockPageContent,
+            TEST_MODEL,
+            controller.signal,
+          )) {
+            // consume
+          }
+        })(),
+      ).rejects.toMatchObject({ name: 'AbortError' });
     });
 
     it('getSettings失敗時にyield経路でエラーを返す', async () => {
