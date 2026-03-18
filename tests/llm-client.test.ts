@@ -145,9 +145,7 @@ describe('llm-client', () => {
       }
 
       expect(chunks).toContainEqual({ type: 'chunk', content: 'OK' });
-      expect(chunks).toContainEqual(
-        expect.objectContaining({ type: 'done', modelId: TEST_MODEL }),
-      );
+      expect(chunks).toContainEqual(expect.objectContaining({ type: 'done', modelId: TEST_MODEL }));
     });
 
     it('finish_reason: "length" をdoneチャンクに含める', async () => {
@@ -159,9 +157,7 @@ describe('llm-client', () => {
             ),
           );
           controller.enqueue(
-            new TextEncoder().encode(
-              'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n',
-            ),
+            new TextEncoder().encode('data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n'),
           );
           controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
           controller.close();

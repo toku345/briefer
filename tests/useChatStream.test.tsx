@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ChatState, StreamChunk } from '../lib/types';
+import type { ChatMessage, ChatState, StreamChunk } from '../lib/types';
 
 vi.mock('@/lib/llm-client', () => ({
   streamChat: vi.fn(),
@@ -354,11 +354,11 @@ describe('useChatStream truncation detection', () => {
     });
 
     expect(mockChrome.storage.session.set).toHaveBeenCalled();
-    const setCall = mockChrome.storage.session.set.mock.calls[0][0];
-    const persistedMessages = setCall.chat_1;
-    const assistantMsg = persistedMessages.find(
-      (m: { role: string }) => m.role === 'assistant',
-    );
+    const setCall = mockChrome.storage.session.set.mock.calls[0] as unknown as [
+      Record<string, ChatMessage[]>,
+    ];
+    const persistedMessages = setCall[0].chat_1;
+    const assistantMsg = persistedMessages.find((m: { role: string }) => m.role === 'assistant');
     expect(assistantMsg?.truncated).toBe(true);
   });
 });
