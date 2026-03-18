@@ -16,6 +16,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <ErrorBoundary fallback={<span>{message.content}</span>}>
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
         </ErrorBoundary>
+        {message.truncated && (
+          <output className="truncation-warning">
+            出力がmax_tokensの上限に達したため途中で切れています。設定から上限を増やせます。
+          </output>
+        )}
       </div>
     );
   }
