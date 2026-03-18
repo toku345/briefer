@@ -72,6 +72,7 @@ Side Panel fetches directly to vLLM API. Service Worker does not relay — it on
 | `entrypoints/sidepanel/hooks/usePageContent.ts` | Page content retrieval via executeScript |
 | `entrypoints/sidepanel/hooks/useServerHealth.ts` | vLLM server health check |
 | `entrypoints/sidepanel/hooks/usePendingText.ts` | Context menu selected text injection into input field |
+| `entrypoints/sidepanel/hooks/useDocumentVisible.ts` | Document visibility tracking (pauses polling when hidden) |
 | `wxt.config.ts` | WXT config (manifest definition, React module) |
 
 ## LLM Settings
