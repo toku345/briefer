@@ -222,4 +222,74 @@ describe('useServerHealth', () => {
 
     expect(storageListeners.length).toBe(0);
   });
+
+  describe('paused パラメータ', () => {
+    it('paused=true の場合 fetch を呼ばない', async () => {
+      fetchSpy.mockResolvedValue({ ok: true });
+      const { result } = renderHook(() => useServerHealth({ paused: true }));
+
+      await act(async () => {});
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.current.status).toBe('checking');
+    });
+
+    it('paused=true の場合 interval も登録されない', async () => {
+      fetchSpy.mockResolvedValue({ ok: true });
+      renderHook(() => useServerHealth({ paused: true }));
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('paused=true の場合 storage listener も登録されない', async () => {
+      fetchSpy.mockResolvedValue({ ok: true });
+      renderHook(() => useServerHealth({ paused: true }));
+
+      await act(async () => {});
+
+      expect(storageListeners.length).toBe(0);
+    });
+
+    it('paused が false に切り替わると即座にヘルスチェックを再開する', async () => {
+      fetchSpy.mockResolvedValue({ ok: true });
+      const { result, rerender } = renderHook(({ paused }) => useServerHealth({ paused }), {
+        initialProps: { paused: true },
+      });
+
+      await act(async () => {});
+      expect(fetchSpy).not.toHaveBeenCalled();
+
+      rerender({ paused: false });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe('connected');
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('paused が true に切り替わると interval が停止する', async () => {
+      fetchSpy.mockResolvedValue({ ok: true });
+      const { result, rerender } = renderHook(({ paused }) => useServerHealth({ paused }), {
+        initialProps: { paused: false },
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe('connected');
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      rerender({ paused: true });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000);
+      });
+
+      // paused 前の 1 回のみ
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });

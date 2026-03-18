@@ -6,11 +6,13 @@ export type ConnectionStatus = 'connected' | 'checking' | 'disconnected';
 
 const HEALTH_CHECK_INTERVAL_MS = 30_000;
 
-export function useServerHealth() {
+export function useServerHealth({ paused = false }: { paused?: boolean } = {}) {
   // 初回ヘルスチェック完了まで黄色ドット表示（赤のフラッシュを回避）
   const [status, setStatus] = useState<ConnectionStatus>('checking');
 
   useEffect(() => {
+    if (paused) return;
+
     const mounted = { current: true };
 
     async function check() {
@@ -57,7 +59,7 @@ export function useServerHealth() {
       clearInterval(id);
       chrome.storage.onChanged.removeListener(onChanged);
     };
-  }, []);
+  }, [paused]);
 
   return { status };
 }
