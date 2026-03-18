@@ -172,6 +172,7 @@ export async function* streamChat(
 
   const decoder = new TextDecoder();
   let buffer = '';
+  let lastFinishReason: string | undefined;
 
   try {
     while (true) {
@@ -192,6 +193,10 @@ export async function* streamChat(
           if (!json || typeof json !== 'object' || !Array.isArray(json.choices)) {
             continue;
           }
+          const finishReason = json.choices[0]?.finish_reason;
+          if (typeof finishReason === 'string') {
+            lastFinishReason = finishReason;
+          }
           const content = json.choices[0]?.delta?.content;
           if (typeof content === 'string' && content) {
             yield { type: 'chunk', content };
@@ -202,7 +207,7 @@ export async function* streamChat(
       }
     }
 
-    yield { type: 'done', modelId: model };
+    yield { type: 'done', modelId: model, finishReason: lastFinishReason };
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') return;
     console.error('[streamChat] Stream read failed:', error);
