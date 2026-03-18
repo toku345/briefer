@@ -436,7 +436,7 @@ describe('llm-client', () => {
       expect(chunks).toEqual([{ type: 'error', error: 'API error: 500 Internal Server Error' }]);
     });
 
-    it('modelIdを含むメッセージからAPIリクエスト時にmodelIdを除外する', async () => {
+    it('modelId・truncatedを含むメッセージからAPIリクエスト時にこれらを除外する', async () => {
       const mockStream = new ReadableStream({
         start(controller) {
           controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
@@ -448,7 +448,7 @@ describe('llm-client', () => {
 
       const messages: ChatMessage[] = [
         { role: 'user', content: '要約して' },
-        { role: 'assistant', content: '要約です', modelId: 'org/some-model' },
+        { role: 'assistant', content: '要約です', modelId: 'org/some-model', truncated: true },
         { role: 'user', content: '続けて' },
       ];
 
@@ -461,6 +461,7 @@ describe('llm-client', () => {
 
       for (const msg of body.messages) {
         expect(msg).not.toHaveProperty('modelId');
+        expect(msg).not.toHaveProperty('truncated');
       }
     });
   });
