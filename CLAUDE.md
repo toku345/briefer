@@ -73,6 +73,7 @@ Side Panel fetches directly to vLLM API. Service Worker does not relay — it on
 | `entrypoints/sidepanel/hooks/useServerHealth.ts` | vLLM server health check |
 | `entrypoints/sidepanel/hooks/usePendingText.ts` | Context menu selected text injection into input field |
 | `entrypoints/sidepanel/hooks/useDocumentVisible.ts` | Document visibility tracking (pauses polling when hidden) |
+| `entrypoints/sidepanel/hooks/useModels.ts` | Model list fetching via React Query (enabled option for conditional fetch) |
 | `wxt.config.ts` | WXT config (manifest definition, React module) |
 
 ## LLM Settings
@@ -88,6 +89,8 @@ Managed by `lib/settings-store.ts`. Server URL (default: `http://localhost:8000/
 - Timer tests: `vi.useFakeTimers({ shouldAdvanceTime: true })` + `vi.advanceTimersByTimeAsync()`
 - Hook tests: `renderHook()` + `waitFor()` / `act()` for async state updates
 - Hooks using React Query must be wrapped with `QueryClientProvider`
+- React Query wrapper: `new QueryClient({ defaultOptions: { queries: { retry: false } } })` + `QueryClientProvider` (see `tests/useChatStream.test.tsx` for `createWrapper()` pattern)
+- Test files with `vi.mock()`: use top-level `await import()` for the module under test (not `beforeAll`)
 - Abort-aware mock generators: use `resolve()` on abort (not `reject(DOMException)`) to match `streamChat`'s silent-return behavior
 
 ## Chrome Extension Gotchas
