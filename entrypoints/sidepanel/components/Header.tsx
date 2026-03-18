@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useModels } from '../hooks/useModels';
 import { useSelectedModel } from '../hooks/useSelectedModel';
-import { type ConnectionStatus, useServerHealth } from '../hooks/useServerHealth';
+import type { ConnectionStatus } from '../hooks/useServerHealth';
 import { SettingsPopover } from './SettingsPopover';
 
 const STATUS_LABELS: Record<ConnectionStatus, string> = {
@@ -19,12 +19,12 @@ const STATUS_CLASSES: Record<ConnectionStatus, string> = {
 interface HeaderProps {
   onClearChat: () => void;
   hasMessages: boolean;
+  status: ConnectionStatus;
 }
 
-export function Header({ onClearChat, hasMessages }: HeaderProps) {
-  const { data: models, isLoading } = useModels();
+export function Header({ onClearChat, hasMessages, status }: HeaderProps) {
+  const { data: models, isLoading } = useModels({ enabled: status === 'connected' });
   const { model, selectModel } = useSelectedModel();
-  const { status } = useServerHealth();
   const [showSettings, setShowSettings] = useState(false);
   const gearBtnRef = useRef<HTMLButtonElement>(null);
   const handleCloseSettings = useCallback(() => setShowSettings(false), []);

@@ -7,12 +7,14 @@ import { PageContextBar } from './components/PageContextBar';
 import { useChatHistory } from './hooks/useChatHistory';
 import { useChatStream } from './hooks/useChatStream';
 import { useCurrentTab } from './hooks/useCurrentTab';
+import { useDocumentVisible } from './hooks/useDocumentVisible';
 import { usePageContent } from './hooks/usePageContent';
 import { usePendingText } from './hooks/usePendingText';
 import { useServerHealth } from './hooks/useServerHealth';
 
 export function App() {
-  const { status: serverStatus } = useServerHealth();
+  const visible = useDocumentVisible();
+  const { status: serverStatus } = useServerHealth({ paused: !visible });
   const { tabId, title: tabTitle, url: tabUrl, error: tabError } = useCurrentTab();
   const { data: rawPageContent, error: contentError } = usePageContent(tabId);
   const pageContent = rawPageContent ?? null;
@@ -49,7 +51,7 @@ export function App() {
 
   return (
     <div className="container">
-      <Header onClearChat={clearChat} hasMessages={messages.length > 0} />
+      <Header onClearChat={clearChat} hasMessages={messages.length > 0} status={serverStatus} />
       <PageContextBar title={tabTitle} url={tabUrl} />
       <ChatContainer
         messages={messages}
