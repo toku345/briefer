@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 let useDocumentVisible: typeof import('../entrypoints/sidepanel/hooks/useDocumentVisible').useDocumentVisible;
 
@@ -10,6 +10,14 @@ describe('useDocumentVisible', () => {
   beforeAll(async () => {
     const module = await import('../entrypoints/sidepanel/hooks/useDocumentVisible');
     useDocumentVisible = module.useDocumentVisible;
+  });
+
+  beforeEach(() => {
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      writable: true,
+      configurable: true,
+    });
   });
 
   afterEach(() => {
@@ -62,6 +70,17 @@ describe('useDocumentVisible', () => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
     expect(result.current).toBe(true);
+  });
+
+  it('初期状態が hidden の場合 false を返す', () => {
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'hidden',
+      writable: true,
+      configurable: true,
+    });
+
+    const { result } = renderHook(() => useDocumentVisible());
+    expect(result.current).toBe(false);
   });
 
   it('unmount 後にイベントリスナーが解除される', () => {

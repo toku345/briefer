@@ -271,6 +271,22 @@ describe('useServerHealth', () => {
       expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
 
+    it('connected → paused で status が connected を維持する', async () => {
+      fetchSpy.mockResolvedValue({ ok: true });
+      const { result, rerender } = renderHook(({ paused }) => useServerHealth({ paused }), {
+        initialProps: { paused: false },
+      });
+
+      await waitFor(() => {
+        expect(result.current.status).toBe('connected');
+      });
+
+      rerender({ paused: true });
+
+      // paused 後も直前の status が保持される
+      expect(result.current.status).toBe('connected');
+    });
+
     it('paused が true に切り替わると interval が停止する', async () => {
       fetchSpy.mockResolvedValue({ ok: true });
       const { result, rerender } = renderHook(({ paused }) => useServerHealth({ paused }), {
