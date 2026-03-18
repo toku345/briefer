@@ -145,7 +145,72 @@ describe('llm-client', () => {
       }
 
       expect(chunks).toContainEqual({ type: 'chunk', content: 'OK' });
-      expect(chunks).toContainEqual({ type: 'done', modelId: TEST_MODEL });
+      expect(chunks).toContainEqual(
+        expect.objectContaining({ type: 'done', modelId: TEST_MODEL }),
+      );
+    });
+
+    it('finish_reason: "length" をdoneチャンクに含める', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(
+              'data: {"choices":[{"delta":{"content":"text"},"finish_reason":null}]}\n',
+            ),
+          );
+          controller.enqueue(
+            new TextEncoder().encode(
+              'data: {"choices":[{"delta":{},"finish_reason":"length"}]}\n',
+            ),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        chunks.push(chunk);
+      }
+
+      const doneChunk = chunks.find((c) => c.type === 'done');
+      expect(doneChunk).toEqual({
+        type: 'done',
+        modelId: TEST_MODEL,
+        finishReason: 'length',
+      });
+    });
+
+    it('finish_reason: "stop" をdoneチャンクに含める', async () => {
+      const mockStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            new TextEncoder().encode(
+              'data: {"choices":[{"delta":{"content":"done"},"finish_reason":"stop"}]}\n',
+            ),
+          );
+          controller.enqueue(new TextEncoder().encode('data: [DONE]\n'));
+          controller.close();
+        },
+      });
+
+      mockFetch.mockResolvedValue({ ok: true, body: mockStream });
+
+      const messages: ChatMessage[] = [{ role: 'user', content: 'test' }];
+      const chunks: StreamChunk[] = [];
+      for await (const chunk of streamChat(messages, mockPageContent, TEST_MODEL)) {
+        chunks.push(chunk);
+      }
+
+      const doneChunk = chunks.find((c) => c.type === 'done');
+      expect(doneChunk).toEqual({
+        type: 'done',
+        modelId: TEST_MODEL,
+        finishReason: 'stop',
+      });
     });
 
     it('レスポンスボディがない場合はエラーを返す', async () => {

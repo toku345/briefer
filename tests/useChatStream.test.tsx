@@ -298,6 +298,71 @@ describe('useChatStream retry', () => {
   });
 });
 
+describe('useChatStream truncation detection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('finish_reason: "length" 時にassistantメッセージにtruncated: trueが設定される', async () => {
+    mockStreamChat.mockImplementation(async function* () {
+      yield { type: 'chunk' as const, content: 'partial output' };
+      yield { type: 'done' as const, modelId: 'test-model', finishReason: 'length' };
+    });
+
+    const { queryClient, wrapper } = createWrapper();
+    const { result } = renderHook(() => useChatStream(1, pageContent), { wrapper });
+
+    await act(async () => {
+      await result.current.sendMessage('hello');
+    });
+
+    const state = queryClient.getQueryData<ChatState>(['chat', 1]);
+    const assistantMsg = state?.messages.find((m) => m.role === 'assistant');
+    expect(assistantMsg?.truncated).toBe(true);
+    expect(assistantMsg?.content).toBe('partial output');
+  });
+
+  it('finish_reason: "stop" 時にtruncatedが設定されない', async () => {
+    mockStreamChat.mockImplementation(async function* () {
+      yield { type: 'chunk' as const, content: 'full output' };
+      yield { type: 'done' as const, modelId: 'test-model', finishReason: 'stop' };
+    });
+
+    const { queryClient, wrapper } = createWrapper();
+    const { result } = renderHook(() => useChatStream(1, pageContent), { wrapper });
+
+    await act(async () => {
+      await result.current.sendMessage('hello');
+    });
+
+    const state = queryClient.getQueryData<ChatState>(['chat', 1]);
+    const assistantMsg = state?.messages.find((m) => m.role === 'assistant');
+    expect(assistantMsg?.truncated).toBeUndefined();
+  });
+
+  it('truncatedメッセージがsession storageに永続化される', async () => {
+    mockStreamChat.mockImplementation(async function* () {
+      yield { type: 'chunk' as const, content: 'truncated' };
+      yield { type: 'done' as const, modelId: 'test-model', finishReason: 'length' };
+    });
+
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useChatStream(1, pageContent), { wrapper });
+
+    await act(async () => {
+      await result.current.sendMessage('hello');
+    });
+
+    expect(mockChrome.storage.session.set).toHaveBeenCalled();
+    const setCall = mockChrome.storage.session.set.mock.calls[0][0];
+    const persistedMessages = setCall.chat_1;
+    const assistantMsg = persistedMessages.find(
+      (m: { role: string }) => m.role === 'assistant',
+    );
+    expect(assistantMsg?.truncated).toBe(true);
+  });
+});
+
 describe('useChatStream partial response preservation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
