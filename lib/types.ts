@@ -20,6 +20,8 @@ export interface ChatMessage {
   content: string;
   /** アシスタントメッセージ生成時に使用されたモデルID */
   modelId?: string;
+  /** max_tokensに到達して出力が途中で切れた場合にtrue */
+  truncated?: boolean;
 }
 
 export interface ChatState {
@@ -29,7 +31,7 @@ export interface ChatState {
 
 export type StreamChunk =
   | { type: 'chunk'; content: string }
-  | { type: 'done'; modelId: string }
+  | { type: 'done'; modelId: string; finishReason?: string }
   | { type: 'error'; error: string };
 
 export const SETTINGS_KEY = 'briefer_settings';

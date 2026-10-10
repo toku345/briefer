@@ -68,6 +68,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
       let fullResponse = '';
       let didFail = false;
       let stallTimedOut = false;
+      let finishReason: string | undefined;
       let stallTimerId: ReturnType<typeof setTimeout> | undefined;
       const filter = new ThinkTagFilter();
 
@@ -93,6 +94,8 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
             if (filtered) {
               setStreamingContent((prev) => prev + filtered);
             }
+          } else if (chunk.type === 'done') {
+            finishReason = chunk.finishReason;
           } else if (chunk.type === 'error') {
             setError(chunk.error);
             didFail = true;
@@ -116,6 +119,7 @@ export function useChatStream(tabId: number | null, pageContent: ExtractedConten
             role: 'assistant',
             content: fullResponse,
             modelId: model,
+            ...(finishReason === 'length' && { truncated: true }),
           };
 
           const updatedMessages = [...allMessages, assistantMessage];
